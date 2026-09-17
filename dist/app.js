@@ -17,12 +17,12 @@ function render(){const v=vals();ctx.save();ctx.fillStyle=$('#whiteBg').checked?
   text(v.productName||'产品名称',187,91,18,'700');
   const left=[['打包费',245],['配送费',316],['店铺活动/券',387],['平台红包',458],['下单返豆',529]];left.forEach(([a,y])=>text(a,48,y,24,'650'));text('合计',48,625,27,'800');text('备注',48,718,24,'800');
   [278,349,420,491,562,669].forEach(y=>{ctx.fillStyle='#eef1f4';ctx.fillRect(47,y,704,1)});ctx.fillStyle='#edf3f6';ctx.fillRect(47,676,704,10);
-  if(state.cutout){const maxW=420,maxH=570,r=Math.min(maxW/state.cutout.width,maxH/state.cutout.height),w=state.cutout.width*r,h=state.cutout.height*r;ctx.save();ctx.shadowColor='rgba(35,26,18,.24)';ctx.shadowBlur=18;ctx.shadowOffsetY=10;ctx.drawImage(state.cutout,250+(420-w)/2,112+(570-h),w,h);ctx.restore()}else{text(state.cutoutBusy?'AI正在生成立体商品主体…':'上传截图后自动生成商品抠图',460,390,17,'500','#a0a8b6','center')}
+  if(state.cutout){const maxW=430,maxH=600,centerX=400,bottomY=700,r=Math.min(maxW/state.cutout.width,maxH/state.cutout.height),w=state.cutout.width*r,h=state.cutout.height*r;ctx.save();ctx.shadowColor='rgba(35,26,18,.2)';ctx.shadowBlur=16;ctx.shadowOffsetY=8;ctx.drawImage(state.cutout,centerX-w/2,bottomY-h,w,h);ctx.restore()}else{text(state.cutoutBusy?'AI正在生成立体商品主体…':'点击智能解析生成透明商品主体',400,390,17,'500','#a0a8b6','center')}
   text('¥'+money(v.productPrice),714,105,29,'700','#111a30','right');text('¥'+money(v.packingFee),714,246,25,'650','#111a30','right');
   text('减'+money(v.deliveryDiscount)+'元',592,316,22,'700','#ef2d2d');text('¥3',665,316,20,'500','#8a91a0');text('¥'+money(v.deliveryFee),714,316,25,'650','#111a30','right');
   ctx.save();ctx.fillStyle='#fff0ee';roundedRect(ctx,560,365,128,34,7);ctx.fill();ctx.restore();text('群可再领2元',624,382,18,'650','#ef3a30','center');text('›',711,382,28,'400','#8e96a5','center');
   ctx.save();ctx.fillStyle='#f1322f';roundedRect(ctx,563,427,78,36,6);ctx.fill();ctx.restore();text('爆红包',602,445,18,'700','#fff','center');text('-¥'+money(v.redEnvelope),701,445,23,'750','#ef2d2d','right');text('›',716,445,28,'400','#8e96a5','center');text('新人最高'+money(v.newUserMax)+'元红包',563,476,13,'650','#ef2d2d');
-  text('含吃货卡奖励等',560,521,20,'650','#ef2d2d');text('¥21',534,625,23,'700','#ef2d2d','right');text('¥'+money(v.finalPrice)+'起',714,625,36,'700','#111a30','right');
+  text('含吃货卡奖励等',560,521,20,'650','#ef2d2d');text('¥'+money(v.finalPrice)+'起',714,625,36,'700','#111a30','right');
   text('仅限首次在淘宝闪购下单的新用户参与',289,716,12,'400','#555d6c');text('用户领取淘宝闪购频道专属权益后下单可享优惠，活动详情请见淘宝APP',289,739,12,'400','#555d6c');
 }
 fields.forEach(id=>$('#'+id).addEventListener('input',render));$('#whiteBg').addEventListener('change',render);
@@ -76,7 +76,7 @@ function pointerToNorm(e){const ir=imageRect();return{x:(e.clientX-ir.x)/ir.w,y:
 function setupCropInteraction(selector,key,after){const box=$(selector);box.addEventListener('pointerdown',e=>{e.preventDefault();box.setPointerCapture(e.pointerId);const p=pointerToNorm(e);state.drag={key,mode:e.target.classList.contains('handle')?'resize':'move',p,c:{...state[key]}}});box.addEventListener('pointermove',e=>{if(!state.drag||state.drag.key!==key)return;const p=pointerToNorm(e),d=state.drag,c=state[key];if(d.mode==='move'){c.x=Math.max(0,Math.min(1-d.c.w,d.c.x+p.x-d.p.x));c.y=Math.max(0,Math.min(1-d.c.h,d.c.y+p.y-d.p.y))}else{c.w=Math.max(.05,Math.min(1-d.c.x,d.c.w+p.x-d.p.x));c.h=Math.max(.07,Math.min(1-d.c.y,d.c.h+p.y-d.p.y))}updateCropBoxes()});box.addEventListener('pointerup',()=>{state.drag=null;if(after)after()})}
 setupCropInteraction('#cropBox','crop',()=>{processCrop();render()});setupCropInteraction('#nameCropBox','nameCrop',null);$('#autoCropBtn').addEventListener('click',()=>{autoCrop();processCrop();render()});
 function cropByNorm(c){const s=state.source,sw=Math.max(1,Math.round(c.w*s.naturalWidth)),sh=Math.max(1,Math.round(c.h*s.naturalHeight)),sx=Math.round(c.x*s.naturalWidth),sy=Math.round(c.y*s.naturalHeight),tmp=document.createElement('canvas');tmp.width=sw;tmp.height=sh;tmp.getContext('2d',{willReadFrequently:true}).drawImage(s,sx,sy,sw,sh,0,0,sw,sh);return tmp}
-function processCrop(){if(!state.source)return;const tmp=cropByNorm(state.crop);state.rawCrop=tmp;const enhanced=enhanceCanvas(tmp);state.thumb=enhanced;state.cutout=trimOuterWhitespace(enhanced);const short=Math.min(tmp.width,tmp.height);$('#parseStatus').textContent=short<180?'原图较小，将使用AI超分增强':'已精确选图，商品内部细节将完整保留'}
+function processCrop(){if(!state.source)return;const tmp=cropByNorm(state.crop);state.rawCrop=tmp;const enhanced=enhanceCanvas(tmp);state.thumb=enhanced;state.cutout=null;const short=Math.min(tmp.width,tmp.height);$('#parseStatus').textContent=short<180?'原图较小，请点击智能解析进行AI超分抠图':'选区已更新，请点击智能解析生成透明主体'}
 function enhanceCanvas(src){const max=Math.max(src.width,src.height),scale=Math.max(1,Math.min(5,1100/max)),o=document.createElement('canvas');o.width=Math.round(src.width*scale);o.height=Math.round(src.height*scale);const c=o.getContext('2d',{willReadFrequently:true});c.imageSmoothingEnabled=true;c.imageSmoothingQuality='high';c.filter='contrast(1.08) saturate(1.08)';c.drawImage(src,0,0,o.width,o.height);c.filter='none';return sharpenCanvas(o,.22)}
 async function aiEnhanceCurrent(){
   if(!state.rawCrop)return false;
@@ -118,7 +118,7 @@ async function aiProductCutout(src,mode='fast'){
   const {removeBackground}=await bgRemovalModulePromise,input=await canvasToBlob(src),config=backgroundConfig(true,mode);
   let result;try{result=await removeBackground(input,config)}catch(e){if(config.device!=='gpu')throw e;result=await removeBackground(input,{...config,device:'cpu'})}
   state.modelReady=true;
-  $('#parseStatus').textContent='正在清理圆形底图和商品标签…';return removeFloatingTags(await blobToCanvas(result));
+  $('#parseStatus').textContent='正在清理圆形底图、商品标签和离散装饰…';return keepPrimaryProduct(removeFloatingTags(await blobToCanvas(result)));
 }
 function backgroundConfig(showProgress=false,mode='fast'){const detail=mode==='detail';return{model:detail?'medium':'small',device:navigator.gpu?'gpu':'cpu',output:{format:'image/png',quality:1},progress:showProgress?(key,current,total)=>{if(total>0&&key.startsWith('fetch'))$('#parseStatus').textContent=`${detail?'精细':'轻量'}模型 ${Math.round(current/total*100)}%`;else if(key.startsWith('compute'))$('#parseStatus').textContent=detail?'精细分离商品与圆形底图…':'极速分离商品与背景…'}:undefined}}
 async function warmupCutoutModel(){try{bgRemovalModulePromise ||= import('https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.7.0/+esm');const {preload}=await bgRemovalModulePromise;await preload(backgroundConfig(false,'fast'));state.modelReady=true;$('#globalStatus').innerHTML='<i></i> 极速AI已就绪 · 图片不上传'}catch(e){console.warn('AI preload skipped',e)}}
@@ -138,6 +138,31 @@ function removeEdgeWhite(src){
   while(a<z){const i=q[a++],x=i%w,y=(i/w)|0;if(x)push(i-1);if(x<w-1)push(i+1);if(y)push(i-w);if(y<h-1)push(i+w)}
   for(let i=0;i<seen.length;i++)if(seen[i])d[i*4+3]=0;
   c.putImageData(im,0,0);return trimCanvas(out);
+}
+function keepPrimaryProduct(src){
+  const c=src.getContext('2d',{willReadFrequently:true}),im=c.getImageData(0,0,src.width,src.height),d=im.data,w=src.width,h=src.height;
+  const seen=new Uint8Array(w*h),components=[];
+  for(let start=0;start<w*h;start++){
+    if(seen[start]||d[start*4+3]<=20)continue;
+    const q=[start];seen[start]=1;let n=0,x0=w,y0=h,x1=0,y1=0;
+    for(let p=0;p<q.length;p++){
+      const i=q[p],x=i%w,y=(i/w)|0;n++;x0=Math.min(x0,x);y0=Math.min(y0,y);x1=Math.max(x1,x);y1=Math.max(y1,y);
+      for(const ni of [x?i-1:-1,x<w-1?i+1:-1,y?i-w:-1,y<h-1?i+w:-1])if(ni>=0&&!seen[ni]&&d[ni*4+3]>20){seen[ni]=1;q.push(ni)}
+    }
+    components.push({pixels:q,n,x0,y0,x1,y1});
+  }
+  if(!components.length)return src;
+  components.sort((a,b)=>b.n-a.n);const main=components[0],keep=new Uint8Array(w*h);
+  for(const i of main.pixels)keep[i]=1;
+  // Keep substantial parts that belong to the same product (for example a detached lid highlight),
+  // but reject small beans, badges and text fragments that would shift the visual centre.
+  for(const part of components.slice(1)){
+    const overlapX=Math.max(0,Math.min(main.x1,part.x1)-Math.max(main.x0,part.x0)+1),minWidth=Math.max(1,Math.min(main.x1-main.x0+1,part.x1-part.x0+1));
+    const closeY=part.y0<=main.y1+Math.round(h*.035)&&part.y1>=main.y0-Math.round(h*.035);
+    if(part.n>=main.n*.045&&overlapX/minWidth>.35&&closeY)for(const i of part.pixels)keep[i]=1;
+  }
+  for(let i=0;i<w*h;i++)if(!keep[i])d[i*4+3]=0;
+  c.putImageData(im,0,0);return trimCanvas(src);
 }
 function trimCanvas(src){const c=src.getContext('2d'),d=c.getImageData(0,0,src.width,src.height).data;let x0=src.width,y0=src.height,x1=0,y1=0;for(let y=0;y<src.height;y++)for(let x=0;x<src.width;x++)if(d[(y*src.width+x)*4+3]>20){x0=Math.min(x0,x);y0=Math.min(y0,y);x1=Math.max(x1,x);y1=Math.max(y1,y)}if(x1<=x0||y1<=y0)return src;const o=document.createElement('canvas');o.width=x1-x0+1;o.height=y1-y0+1;o.getContext('2d').drawImage(src,x0,y0,o.width,o.height,0,0,o.width,o.height);return o}
 async function parseScreenshot(silent=false){
