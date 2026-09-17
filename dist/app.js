@@ -1,6 +1,6 @@
 const $=s=>document.querySelector(s);const canvas=$('#outputCanvas'),ctx=canvas.getContext('2d',{willReadFrequently:true});
 const fields=['productName','productPrice','redEnvelope','newUserMax','packingFee','deliveryFee','deliveryDiscount','finalPrice'];
-const state={source:null,sourceUrl:'',crop:{x:0,y:0,w:1,h:1},nameCrop:{x:.35,y:.05,w:.55,h:.28},thumb:null,cutout:null,cutoutBusy:false,rawCrop:null,drag:null,exportBytes:0,batch:[],current:-1,upscaler:null,batchBusy:false};
+const state={source:null,sourceUrl:'',crop:{x:0,y:0,w:1,h:1},nameCrop:{x:.35,y:.05,w:.55,h:.28},thumb:null,cutout:null,cutoutBusy:false,rawCrop:null,drag:null,exportBytes:0,batch:[],current:-1,batchBusy:false,modelReady:false};
 let bgRemovalModulePromise=null;
 const vals=()=>Object.fromEntries(fields.map(id=>[id,$('#'+id).value]));
 const money=v=>{const n=Number(v);return Number.isFinite(n)?(Number.isInteger(n)?String(n):String(Number(n.toFixed(2)))):'0'};
@@ -80,13 +80,8 @@ function enhanceCanvas(src){const max=Math.max(src.width,src.height),scale=Math.
 async function aiEnhanceCurrent(){
   if(!state.rawCrop)return false;
   state.cutoutBusy=true;state.cutout=null;render();
-  let enhanced=false;
-  if(window.Upscaler&&window.DefaultUpscalerJSModel)try{
-    $('#parseStatus').textContent='AI超分辨率增强中…';state.upscaler ||= new Upscaler({model:DefaultUpscalerJSModel});
-    const src=await state.upscaler.upscale(state.rawCrop,{patchSize:64,padding:4}),img=new Image();await new Promise((ok,bad)=>{img.onload=ok;img.onerror=bad;img.src=src});
-    const cv=document.createElement('canvas'),scale=Math.max(1,Math.min(4,1100/Math.max(img.width,img.height)));cv.width=Math.round(img.width*scale);cv.height=Math.round(img.height*scale);const c=cv.getContext('2d',{willReadFrequently:true});c.imageSmoothingEnabled=true;c.imageSmoothingQuality='high';c.drawImage(img,0,0,cv.width,cv.height);state.thumb=sharpenCanvas(cv,.18);enhanced=true;
-  }catch(e){console.warn('AI upscale fallback',e)}
   try{
+    $('#parseStatus').textContent=state.modelReady?'极速抠图中…':'正在加载轻量AI模型…';
     state.cutout=stylizeCutout(await aiProductCutout(state.thumb||enhanceCanvas(state.rawCrop)));state.cutoutBusy=false;render();return true;
   }catch(e){console.warn('AI product cutout fallback',e);state.cutoutBusy=false;state.cutout=null;render();$('#parseStatus').textContent='AI商品抠图失败，请检查网络后重试';return false}
 }
@@ -114,13 +109,15 @@ function removeFloatingTags(src){
   c.putImageData(im,0,0);return trimCanvas(src);
 }
 async function aiProductCutout(src){
-  $('#parseStatus').textContent='首次使用需加载AI商品模型，请稍候…';
   bgRemovalModulePromise ||= import('https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.7.0/+esm');
-  const {removeBackground}=await bgRemovalModulePromise,input=await canvasToBlob(src);
-  const config={model:'small',device:navigator.gpu?'gpu':'cpu',output:{format:'image/png',quality:1},progress:(key,current,total)=>{if(total>0&&key.startsWith('fetch'))$('#parseStatus').textContent=`加载AI商品模型 ${Math.round(current/total*100)}%（首次约30–90秒）`;else if(key.startsWith('compute'))$('#parseStatus').textContent='AI正在分离商品与背景，请勿关闭页面…'}};
+  const {removeBackground}=await bgRemovalModulePromise,input=await canvasToBlob(src),config=backgroundConfig(true);
   let result;try{result=await removeBackground(input,config)}catch(e){if(config.device!=='gpu')throw e;result=await removeBackground(input,{...config,device:'cpu'})}
+  state.modelReady=true;
   $('#parseStatus').textContent='正在清理圆形底图和商品标签…';return removeFloatingTags(await blobToCanvas(result));
 }
+function backgroundConfig(showProgress=false){return{model:'small',device:navigator.gpu?'gpu':'cpu',output:{format:'image/png',quality:1},progress:showProgress?(key,current,total)=>{if(total>0&&key.startsWith('fetch'))$('#parseStatus').textContent=`轻量模型 ${Math.round(current/total*100)}%`;else if(key.startsWith('compute'))$('#parseStatus').textContent='极速分离商品与背景…'}:undefined}}
+async function warmupCutoutModel(){try{bgRemovalModulePromise ||= import('https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.7.0/+esm');const {preload}=await bgRemovalModulePromise;await preload(backgroundConfig(false));state.modelReady=true;$('#globalStatus').innerHTML='<i></i> 极速AI已就绪 · 图片不上传'}catch(e){console.warn('AI preload skipped',e)}}
+if('requestIdleCallback'in window)requestIdleCallback(()=>warmupCutoutModel(),{timeout:1200});else setTimeout(warmupCutoutModel,600);
 function removeEdgeWhite(src){
   const out=document.createElement('canvas');out.width=src.width;out.height=src.height;
   const c=out.getContext('2d',{willReadFrequently:true});c.drawImage(src,0,0);
@@ -138,7 +135,20 @@ function removeEdgeWhite(src){
   c.putImageData(im,0,0);return trimCanvas(out);
 }
 function trimCanvas(src){const c=src.getContext('2d'),d=c.getImageData(0,0,src.width,src.height).data;let x0=src.width,y0=src.height,x1=0,y1=0;for(let y=0;y<src.height;y++)for(let x=0;x<src.width;x++)if(d[(y*src.width+x)*4+3]>20){x0=Math.min(x0,x);y0=Math.min(y0,y);x1=Math.max(x1,x);y1=Math.max(y1,y)}if(x1<=x0||y1<=y0)return src;const o=document.createElement('canvas');o.width=x1-x0+1;o.height=y1-y0+1;o.getContext('2d').drawImage(src,x0,y0,o.width,o.height,0,0,o.width,o.height);return o}
-async function parseScreenshot(silent=false){if(!state.source)return toast('请先上传商品截图');const btn=$('#parseBtn'),status=$('#parseStatus'),item=state.batch[state.current];btn.disabled=true;if(item){item.status='处理中';renderBatch()}status.textContent='正在读取紫色名称选区…';try{if(!window.Tesseract)throw new Error('OCR组件未加载');const progress=m=>{if(m.status==='recognizing text')status.textContent=`识别文字 ${Math.round(m.progress*100)}%`};const nameCanvas=cropByNorm(state.nameCrop);const [{data:nameData},{data:allData}]=await Promise.all([Tesseract.recognize(nameCanvas,'chi_sim+eng',{logger:progress}),Tesseract.recognize(state.source,'chi_sim+eng')]);const clean=t=>t.replace(/\s+/g,'').replace(/[|丨]/g,'').trim(),blocked=/(月售|折起|选规格|纯抹茶|浓度|红包|配送|打包|到手)/,nameCandidates=(nameData.lines||[]).map(x=>clean(x.text)).filter(t=>/[\u4e00-\u9fff]/.test(t)&&t.length>=2&&t.length<=18&&!blocked.test(t));if(!nameCandidates.length){const fallback=clean(nameData.text||'');if(/[\u4e00-\u9fff]/.test(fallback)&&fallback.length<=18)nameCandidates.push(fallback)}const raw=(allData.text||'').replace(/\s+/g,' '),prices=[...raw.matchAll(/[¥￥]\s*(\d+(?:\.\d+)?)/g)].map(m=>m[1]);if(nameCandidates[0])$('#productName').value=nameCandidates.sort((a,b)=>b.length-a.length)[0];if(prices.length)$('#productPrice').value=prices.at(-1);processCrop();const cutoutOk=await aiEnhanceCurrent();render();if(item){item.productName=$('#productName').value;item.price=$('#productPrice').value;item.status=cutoutOk?'完成':'抠图失败';renderBatch()}if(cutoutOk){status.textContent='识别完成 · 立体商品主体已生成';if(!silent)toast('已生成透明立体商品主体')}else{status.textContent='AI抠图失败，请检查网络后点击重试';if(!silent)toast('AI抠图未完成，请重试')}return cutoutOk}catch(e){console.warn(e);state.cutoutBusy=false;if(item){item.status='需手动校正';renderBatch()}status.textContent='自动识别不可用，请调整选区后重试';if(!silent)toast('识别失败，请调整商品或名称选区');return false}finally{btn.disabled=false;render()}}
+async function parseScreenshot(silent=false){
+  if(!state.source)return toast('请先上传商品截图');const btn=$('#parseBtn'),status=$('#parseStatus'),item=state.batch[state.current];btn.disabled=true;if(item){item.status='处理中';renderBatch()}
+  status.textContent='单次OCR快速识别中…';
+  try{
+    if(!window.Tesseract)throw new Error('OCR组件未加载');const progress=m=>{if(m.status==='recognizing text')status.textContent=`快速识别文字 ${Math.round(m.progress*100)}%`};
+    const ocrCanvas=document.createElement('canvas'),scale=Math.min(1,1200/state.source.naturalWidth);ocrCanvas.width=Math.round(state.source.naturalWidth*scale);ocrCanvas.height=Math.round(state.source.naturalHeight*scale);ocrCanvas.getContext('2d').drawImage(state.source,0,0,ocrCanvas.width,ocrCanvas.height);
+    const {data:allData}=await Tesseract.recognize(ocrCanvas,'chi_sim+eng',{logger:progress}),clean=t=>t.replace(/\s+/g,'').replace(/[|丨]/g,'').trim(),blocked=/(月售|折起|选规格|纯抹茶|浓度|红包|配送|打包|到手)/;
+    const inNameBox=line=>{const b=line.bbox;if(!b)return false;const cx=(b.x0+b.x1)/2/ocrCanvas.width,cy=(b.y0+b.y1)/2/ocrCanvas.height;return cx>=state.nameCrop.x&&cx<=state.nameCrop.x+state.nameCrop.w&&cy>=state.nameCrop.y&&cy<=state.nameCrop.y+state.nameCrop.h};
+    const nameCandidates=(allData.lines||[]).filter(inNameBox).map(x=>clean(x.text)).filter(t=>/[\u4e00-\u9fff]/.test(t)&&t.length>=2&&t.length<=18&&!blocked.test(t)),raw=(allData.text||'').replace(/\s+/g,' '),prices=[...raw.matchAll(/[¥￥]\s*(\d+(?:\.\d+)?)/g)].map(m=>m[1]);
+    if(nameCandidates[0])$('#productName').value=nameCandidates.sort((a,b)=>b.length-a.length)[0];if(prices.length)$('#productPrice').value=prices.at(-1);
+    processCrop();const cutoutOk=await aiEnhanceCurrent();render();if(item){item.productName=$('#productName').value;item.price=$('#productPrice').value;item.status=cutoutOk?'完成':'抠图失败';renderBatch()}
+    if(cutoutOk){status.textContent='完成 · 极速立体商品主体已生成';if(!silent)toast('极速处理完成')}else{status.textContent='AI抠图失败，请检查网络后点击重试';if(!silent)toast('AI抠图未完成，请重试')}return cutoutOk;
+  }catch(e){console.warn(e);state.cutoutBusy=false;if(item){item.status='需手动校正';renderBatch()}status.textContent='自动识别不可用，请调整选区后重试';if(!silent)toast('识别失败，请调整商品或名称选区');return false}finally{btn.disabled=false;render()}
+}
 $('#parseBtn').addEventListener('click',()=>parseScreenshot(false));
 $('#parseAllBtn').addEventListener('click',async()=>{const b=$('#parseAllBtn');if(!state.batch.length)return;state.batchBusy=true;b.disabled=true;b.textContent='批量处理中…';renderBatch();try{for(let i=0;i<state.batch.length;i++){await openBatch(i);await parseScreenshot(true)}}finally{state.batchBusy=false;b.disabled=false;b.textContent='一键解析并优化全部';renderBatch()}toast('批量任务处理完成')});
 async function canvasBlob(q){return new Promise(r=>canvas.toBlob(r,'image/jpeg',q))}async function download(){render();let q=.92,blob=await canvasBlob(q);while(blob.size>400*1024&&q>.45){q-=.07;blob=await canvasBlob(q)}state.exportBytes=blob.size;$('#exportMeta').textContent=`800×800 · ${(blob.size/1024).toFixed(0)} KB`;const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=(($('#productName').value||'商品图').replace(/[\\/:*?"<>|]/g,'_'))+'-800x800.jpg';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);toast('成品图已下载')}
