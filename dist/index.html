@@ -20,16 +20,21 @@
     <section class="panel controls" aria-label="商品设置">
       <div class="panel-head"><div><span class="step">01</span><h1>上传商品截图</h1></div><span class="privacy">图片仅在浏览器处理</span></div>
       <label class="dropzone" id="dropzone" for="fileInput">
-        <input id="fileInput" type="file" accept="image/png,image/jpeg,image/webp" />
+        <input id="fileInput" type="file" accept="image/png,image/jpeg,image/webp" multiple />
         <span class="upload-icon">↑</span>
-        <strong>拖入截图，或点击选择</strong>
-        <small>支持商品卡片、列表截图；识别后可手动修正</small>
+        <strong>拖入截图，或点击批量选择</strong>
+        <small>支持一次上传多张；自动选取文字、主图并高清润色</small>
       </label>
+
+      <div class="batch-card" id="batchCard" hidden>
+        <div class="batch-head"><div><strong>批量任务</strong><span id="batchCount">0 张</span></div><button class="secondary" id="parseAllBtn" type="button">一键解析并优化全部</button></div>
+        <div class="batch-list" id="batchList"></div>
+      </div>
 
       <div class="source-wrap" id="sourceWrap" hidden>
         <div class="source-toolbar"><span>拖动方框选中商品图</span><button class="text-btn" id="autoCropBtn" type="button">重新智能框选</button></div>
         <div class="crop-stage" id="cropStage"><img id="sourceImage" alt="上传的商品截图" /><div id="cropBox" class="crop-box" tabindex="0" aria-label="商品区域选择框"><b class="handle br"></b></div></div>
-        <div class="parse-row"><button class="secondary" id="parseBtn" type="button">智能解析截图</button><span id="parseStatus">等待解析</span></div>
+        <div class="parse-row"><button class="secondary" id="parseBtn" type="button">智能解析当前图</button><span id="parseStatus">高清润色已启用</span></div>
       </div>
 
       <div class="section-title"><span class="step">02</span><h2>校正识别结果</h2></div>
