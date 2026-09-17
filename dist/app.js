@@ -2,6 +2,7 @@ const $=s=>document.querySelector(s);const canvas=$('#outputCanvas'),ctx=canvas.
 const fields=['productName','productPrice','redEnvelope','newUserMax','packingFee','deliveryFee','deliveryDiscount','finalPrice'];
 const state={source:null,sourceUrl:'',crop:{x:0,y:0,w:1,h:1},nameCrop:{x:.35,y:.05,w:.55,h:.28},thumb:null,cutout:null,cutoutBusy:false,rawCrop:null,drag:null,exportBytes:0,batch:[],current:-1,batchBusy:false,modelReady:false};
 let bgRemovalModulePromise=null;
+const loadedScripts=new Map();
 const vals=()=>Object.fromEntries(fields.map(id=>[id,$('#'+id).value]));
 const money=v=>{const n=Number(v);return Number.isFinite(n)?(Number.isInteger(n)?String(n):String(Number(n.toFixed(2)))):'0'};
 function toast(msg){const el=$('#toast');el.textContent=msg;el.classList.add('show');clearTimeout(el.t);el.t=setTimeout(()=>el.classList.remove('show'),2400)}
@@ -81,8 +82,10 @@ async function aiEnhanceCurrent(){
   if(!state.rawCrop)return false;
   state.cutoutBusy=true;state.cutout=null;render();
   try{
-    $('#parseStatus').textContent=state.modelReady?'极速抠图中…':'正在加载轻量AI模型…';
-    state.cutout=stylizeCutout(await aiProductCutout(state.thumb||enhanceCanvas(state.rawCrop)));state.cutoutBusy=false;render();return true;
+    const mode=$('#qualityMode').value;let source=state.thumb||enhanceCanvas(state.rawCrop);
+    if(mode==='detail')try{$('#parseStatus').textContent='精细3D超分增强中…';source=await superResolveCanvas(state.rawCrop);state.thumb=source}catch(e){console.warn('Detail upscale fallback',e)}
+    $('#parseStatus').textContent=mode==='detail'?'高精度商品分割中…':(state.modelReady?'极速抠图中…':'正在加载轻量AI模型…');
+    state.cutout=stylizeCutout(await aiProductCutout(source,mode));state.cutoutBusy=false;render();return true;
   }catch(e){console.warn('AI product cutout fallback',e);state.cutoutBusy=false;state.cutout=null;render();$('#parseStatus').textContent='AI商品抠图失败，请检查网络后重试';return false}
 }
 function sharpenCanvas(src,amount){const c=src.getContext('2d',{willReadFrequently:true}),im=c.getImageData(0,0,src.width,src.height),s=im.data,out=new Uint8ClampedArray(s),w=src.width,h=src.height;for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){const i=(y*w+x)*4;for(let k=0;k<3;k++){const sharp=5*s[i+k]-s[i-4+k]-s[i+4+k]-s[i-w*4+k]-s[i+w*4+k];out[i+k]=Math.max(0,Math.min(255,s[i+k]*(1-amount)+sharp*amount))}}im.data.set(out);c.putImageData(im,0,0);return src}
@@ -95,6 +98,8 @@ function trimOuterWhitespace(src){
   const out=document.createElement('canvas');out.width=x1-x0+1;out.height=y1-y0+1;const oc=out.getContext('2d');oc.fillStyle='#fff';oc.fillRect(0,0,out.width,out.height);oc.drawImage(src,x0,y0,out.width,out.height,0,0,out.width,out.height);return out;
 }
 function stylizeCutout(src){const out=document.createElement('canvas');out.width=src.width;out.height=src.height;const c=out.getContext('2d',{willReadFrequently:true});c.filter='contrast(1.1) saturate(1.06)';c.drawImage(src,0,0);c.filter='none';return sharpenCanvas(out,.14)}
+function loadScript(src,id){if(loadedScripts.has(id))return loadedScripts.get(id);const p=new Promise((ok,bad)=>{const existing=document.getElementById(id);if(existing)return existing.dataset.ready==='1'?ok():existing.addEventListener('load',ok,{once:true});const s=document.createElement('script');s.id=id;s.src=src;s.onload=()=>{s.dataset.ready='1';ok()};s.onerror=()=>bad(new Error('组件加载失败: '+id));document.head.appendChild(s)});loadedScripts.set(id,p);return p}
+async function superResolveCanvas(src){await loadScript('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4/dist/tf.min.js','tfjs-runtime');await Promise.all([loadScript('https://cdn.jsdelivr.net/npm/@upscalerjs/default-model@latest/dist/umd/index.min.js','upscaler-model'),loadScript('https://cdn.jsdelivr.net/npm/upscaler@latest/dist/browser/umd/upscaler.min.js','upscaler-runtime')]);state.detailUpscaler ||= new Upscaler({model:DefaultUpscalerJSModel});const data=await state.detailUpscaler.upscale(src,{patchSize:64,padding:4}),img=new Image();await new Promise((ok,bad)=>{img.onload=ok;img.onerror=bad;img.src=data});const out=document.createElement('canvas'),scale=Math.max(1,Math.min(4,1200/Math.max(img.width,img.height)));out.width=Math.round(img.width*scale);out.height=Math.round(img.height*scale);const c=out.getContext('2d',{willReadFrequently:true});c.imageSmoothingEnabled=true;c.imageSmoothingQuality='high';c.drawImage(img,0,0,out.width,out.height);return sharpenCanvas(out,.2)}
 function canvasToBlob(src){return new Promise((resolve,reject)=>src.toBlob(blob=>blob?resolve(blob):reject(new Error('图片转换失败')),'image/png',1))}
 async function blobToCanvas(blob){const url=URL.createObjectURL(blob),img=new Image();try{await new Promise((ok,bad)=>{img.onload=ok;img.onerror=bad;img.src=url});const out=document.createElement('canvas');out.width=img.naturalWidth;out.height=img.naturalHeight;out.getContext('2d',{willReadFrequently:true}).drawImage(img,0,0);return out}finally{URL.revokeObjectURL(url)}}
 function removeFloatingTags(src){
@@ -108,15 +113,15 @@ function removeFloatingTags(src){
   }
   c.putImageData(im,0,0);return trimCanvas(src);
 }
-async function aiProductCutout(src){
+async function aiProductCutout(src,mode='fast'){
   bgRemovalModulePromise ||= import('https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.7.0/+esm');
-  const {removeBackground}=await bgRemovalModulePromise,input=await canvasToBlob(src),config=backgroundConfig(true);
+  const {removeBackground}=await bgRemovalModulePromise,input=await canvasToBlob(src),config=backgroundConfig(true,mode);
   let result;try{result=await removeBackground(input,config)}catch(e){if(config.device!=='gpu')throw e;result=await removeBackground(input,{...config,device:'cpu'})}
   state.modelReady=true;
   $('#parseStatus').textContent='正在清理圆形底图和商品标签…';return removeFloatingTags(await blobToCanvas(result));
 }
-function backgroundConfig(showProgress=false){return{model:'small',device:navigator.gpu?'gpu':'cpu',output:{format:'image/png',quality:1},progress:showProgress?(key,current,total)=>{if(total>0&&key.startsWith('fetch'))$('#parseStatus').textContent=`轻量模型 ${Math.round(current/total*100)}%`;else if(key.startsWith('compute'))$('#parseStatus').textContent='极速分离商品与背景…'}:undefined}}
-async function warmupCutoutModel(){try{bgRemovalModulePromise ||= import('https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.7.0/+esm');const {preload}=await bgRemovalModulePromise;await preload(backgroundConfig(false));state.modelReady=true;$('#globalStatus').innerHTML='<i></i> 极速AI已就绪 · 图片不上传'}catch(e){console.warn('AI preload skipped',e)}}
+function backgroundConfig(showProgress=false,mode='fast'){const detail=mode==='detail';return{model:detail?'medium':'small',device:navigator.gpu?'gpu':'cpu',output:{format:'image/png',quality:1},progress:showProgress?(key,current,total)=>{if(total>0&&key.startsWith('fetch'))$('#parseStatus').textContent=`${detail?'精细':'轻量'}模型 ${Math.round(current/total*100)}%`;else if(key.startsWith('compute'))$('#parseStatus').textContent=detail?'精细分离商品与圆形底图…':'极速分离商品与背景…'}:undefined}}
+async function warmupCutoutModel(){try{bgRemovalModulePromise ||= import('https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.7.0/+esm');const {preload}=await bgRemovalModulePromise;await preload(backgroundConfig(false,'fast'));state.modelReady=true;$('#globalStatus').innerHTML='<i></i> 极速AI已就绪 · 图片不上传'}catch(e){console.warn('AI preload skipped',e)}}
 if('requestIdleCallback'in window)requestIdleCallback(()=>warmupCutoutModel(),{timeout:1200});else setTimeout(warmupCutoutModel,600);
 function removeEdgeWhite(src){
   const out=document.createElement('canvas');out.width=src.width;out.height=src.height;
@@ -146,7 +151,7 @@ async function parseScreenshot(silent=false){
     const nameCandidates=(allData.lines||[]).filter(inNameBox).map(x=>clean(x.text)).filter(t=>/[\u4e00-\u9fff]/.test(t)&&t.length>=2&&t.length<=18&&!blocked.test(t)),raw=(allData.text||'').replace(/\s+/g,' '),prices=[...raw.matchAll(/[¥￥]\s*(\d+(?:\.\d+)?)/g)].map(m=>m[1]);
     if(nameCandidates[0])$('#productName').value=nameCandidates.sort((a,b)=>b.length-a.length)[0];if(prices.length)$('#productPrice').value=prices.at(-1);
     processCrop();const cutoutOk=await aiEnhanceCurrent();render();if(item){item.productName=$('#productName').value;item.price=$('#productPrice').value;item.status=cutoutOk?'完成':'抠图失败';renderBatch()}
-    if(cutoutOk){status.textContent='完成 · 极速立体商品主体已生成';if(!silent)toast('极速处理完成')}else{status.textContent='AI抠图失败，请检查网络后点击重试';if(!silent)toast('AI抠图未完成，请重试')}return cutoutOk;
+    if(cutoutOk){const detail=$('#qualityMode').value==='detail';status.textContent=detail?'完成 · 精细3D商品主体已生成':'完成 · 极速立体商品主体已生成';if(!silent)toast(detail?'精细3D处理完成':'极速处理完成')}else{status.textContent='AI抠图失败，请检查网络后点击重试';if(!silent)toast('AI抠图未完成，请重试')}return cutoutOk;
   }catch(e){console.warn(e);state.cutoutBusy=false;if(item){item.status='需手动校正';renderBatch()}status.textContent='自动识别不可用，请调整选区后重试';if(!silent)toast('识别失败，请调整商品或名称选区');return false}finally{btn.disabled=false;render()}
 }
 $('#parseBtn').addEventListener('click',()=>parseScreenshot(false));
