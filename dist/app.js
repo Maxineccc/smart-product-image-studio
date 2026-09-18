@@ -34,6 +34,9 @@ const placementFields=['productScale','productOffsetX','productOffsetY'];
 function updatePlacementLabels(){$('#productScaleValue').value=$('#productScale').value+'%';$('#productOffsetXValue').value=$('#productOffsetX').value;$('#productOffsetYValue').value=$('#productOffsetY').value}
 placementFields.forEach(id=>$('#'+id).addEventListener('input',()=>{updatePlacementLabels();render()}));
 $('#resetPlacement').addEventListener('click',()=>{$('#productScale').value=100;$('#productOffsetX').value=0;$('#productOffsetY').value=0;updatePlacementLabels();render();toast('主体已恢复居中')});updatePlacementLabels();
+const doubaoGreenPrompt='只编辑参考图中的商品主体，严格保持商品外形、材质、颜色、品牌Logo和文字位置，不新增或修改文字。生成高清电商棚拍效果：正面视角，主体完整，边缘清晰，真实材质，左上柔和主光、右下自然暗部，具有明显立体感。背景必须是完全均匀的纯绿色 #00FF00，无渐变、无阴影、无道具、无边框、无其他文字。商品居中完整显示，1:1画面。';
+$('#copyGreenPrompt').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(doubaoGreenPrompt);toast('豆包提示词已复制')}catch{const t=document.createElement('textarea');t.value=doubaoGreenPrompt;document.body.appendChild(t);t.select();document.execCommand('copy');t.remove();toast('豆包提示词已复制')}});
+$('#greenScreenInput').addEventListener('change',async e=>{const file=e.target.files?.[0];if(!file)return;const status=$('#greenStatus'),url=URL.createObjectURL(file),img=new Image();status.textContent='正在本地去除绿色背景…';try{await new Promise((ok,bad)=>{img.onload=ok;img.onerror=bad;img.src=url});state.cutout=stylizeCutout(removeGreenScreen(img),'detail');state.lastCutoutEngine='green-screen';render();status.textContent='完成 · 绿幕已去除，主体已替换';toast('豆包绿幕主体已生成')}catch(err){console.warn(err);status.textContent='处理失败，请确认上传的是纯绿背景图片';toast('绿幕图处理失败')}finally{URL.revokeObjectURL(url);e.target.value=''}});
 function addFiles(list){const files=[...list].filter(f=>f.type.startsWith('image/'));if(!files.length)return toast('请选择图片文件');for(const file of files){const url=URL.createObjectURL(file);state.batch.push({file,url,name:file.name,status:'待处理',productName:'',price:''})}$('#batchCard').hidden=false;renderBatch();openBatch(state.batch.length-files.length);toast(`已加入 ${files.length} 张截图`)}
 function renderBatch(){
   const el=$('#batchList');
@@ -106,6 +109,11 @@ async function aiEnhanceCurrent(){
   }catch(e){console.warn('AI product cutout fallback',e);state.cutoutBusy=false;state.cutout=null;render();$('#parseStatus').textContent='两个本地模型均未完成，请检查网络后重试';return false}
 }
 function sharpenCanvas(src,amount){const c=src.getContext('2d',{willReadFrequently:true}),im=c.getImageData(0,0,src.width,src.height),s=im.data,out=new Uint8ClampedArray(s),w=src.width,h=src.height;for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){const i=(y*w+x)*4;for(let k=0;k<3;k++){const sharp=5*s[i+k]-s[i-4+k]-s[i+4+k]-s[i-w*4+k]-s[i+w*4+k];out[i+k]=Math.max(0,Math.min(255,s[i+k]*(1-amount)+sharp*amount))}}im.data.set(out);c.putImageData(im,0,0);return src}
+function removeGreenScreen(img){
+  const out=document.createElement('canvas');out.width=img.naturalWidth||img.width;out.height=img.naturalHeight||img.height;const c=out.getContext('2d',{willReadFrequently:true});c.drawImage(img,0,0,out.width,out.height);const im=c.getImageData(0,0,out.width,out.height),d=im.data;
+  for(let i=0;i<d.length;i+=4){const r=d[i],g=d[i+1],b=d[i+2],lead=g-Math.max(r,b),greenStrength=Math.max(0,Math.min(1,(lead-12)/78))*Math.max(0,Math.min(1,(g-65)/150));if(greenStrength<=0)continue;d[i+3]=Math.round(d[i+3]*(1-greenStrength));if(d[i+3]>0)d[i+1]=Math.min(d[i+1],Math.max(r,b)+Math.round(12+22*(1-greenStrength)))}
+  c.putImageData(im,0,0);return trimCanvas(out);
+}
 function loadScript(src,id){
   if(loadedScripts.has(id))return loadedScripts.get(id);
   const promise=new Promise((resolve,reject)=>{const existing=document.getElementById(id);if(existing){if(existing.dataset.ready==='1')resolve();else{existing.addEventListener('load',resolve,{once:true});existing.addEventListener('error',reject,{once:true})}return}const script=document.createElement('script');script.id=id;script.src=src;script.crossOrigin='anonymous';script.onload=()=>{script.dataset.ready='1';resolve()};script.onerror=()=>reject(new Error('组件加载失败: '+id));document.head.appendChild(script)});loadedScripts.set(id,promise);return promise;
