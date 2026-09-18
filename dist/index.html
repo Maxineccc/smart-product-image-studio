@@ -12,7 +12,7 @@
 </head>
 <body>
   <header class="topbar">
-    <div class="brand"><span class="brand-mark">图</span><div><strong>智能商品图生成器 <em class="version-badge">v1.5</em></strong><small>双模型抠图 · 免费本地处理 · 800×800导出</small></div></div>
+    <div class="brand"><span class="brand-mark">图</span><div><strong>智能商品图生成器 <em class="version-badge">v1.6</em></strong><small>双模型抠图 · 免费本地处理 · 800×800导出</small></div></div>
     <div class="status-pill" id="globalStatus"><i></i> 本地处理，不上传原图</div>
   </header>
 
@@ -34,7 +34,7 @@
       <div class="source-wrap" id="sourceWrap" hidden>
         <div class="source-toolbar"><span><i class="legend orange"></i>商品图 <i class="legend purple"></i>商品名称</span><button class="text-btn" id="autoCropBtn" type="button">重新智能框选</button></div>
         <div class="crop-stage" id="cropStage"><img id="sourceImage" alt="上传的商品截图" /><div id="cropBox" class="crop-box" tabindex="0" aria-label="商品区域选择框"><b class="handle br"></b></div><div id="nameCropBox" class="crop-box name-crop-box" tabindex="0" aria-label="商品名称选择框"><b class="handle br"></b></div></div>
-        <div class="mode-row"><label>处理模型<select id="qualityMode"><option value="u2net" selected>稳定抠图（推荐）</option><option value="detail">原图精细抠图</option><option value="fast">轻量快速抠图</option></select></label><small>默认模型更稳定；精细模式不再超分重绘，全部在本机免费运行</small></div>
+        <div class="mode-row"><label>处理模型<select id="qualityMode"><option value="u2net" selected>稳定抠图（推荐）</option><option value="detail">精细立体抠图</option><option value="fast">轻量快速抠图</option></select></label><small>精细模式会清理圆底、保留原始像素并增强清晰度与立体光影</small></div>
         <div class="parse-row"><button class="secondary" id="parseBtn" type="button">智能解析当前图</button><span id="parseStatus">轻量AI将提前缓存</span></div>
       </div>
 
@@ -73,6 +73,6 @@
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.23.0/dist/ort.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/@bunnio/rembg-web@1.0.2/dist/index.umd.min.js" defer></script>
-  <script src="./app.js?v=12" defer></script>
+  <script src="./app.js?v=13" defer></script>
 </body>
 </html>

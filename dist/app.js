@@ -1,8 +1,9 @@
 const $=s=>document.querySelector(s);const canvas=$('#outputCanvas'),ctx=canvas.getContext('2d',{willReadFrequently:true});
 const fields=['productName','productPrice','redEnvelope','newUserMax','packingFee','deliveryFee','deliveryDiscount','finalPrice'];
-const state={source:null,sourceUrl:'',crop:{x:0,y:0,w:1,h:1},nameCrop:{x:.35,y:.05,w:.55,h:.28},thumb:null,cutout:null,cutoutBusy:false,rawCrop:null,drag:null,exportBytes:0,batch:[],current:-1,batchBusy:false,modelReady:false,lastCutoutEngine:''};
+const state={source:null,sourceUrl:'',crop:{x:0,y:0,w:1,h:1},nameCrop:{x:.35,y:.05,w:.55,h:.28},thumb:null,cutout:null,cutoutBusy:false,rawCrop:null,drag:null,exportBytes:0,batch:[],current:-1,batchBusy:false,modelReady:false,lastCutoutEngine:'',detailUpscaler:null};
 let bgRemovalModulePromise=null;
 let u2netSession=null;
+const loadedScripts=new Map();
 const vals=()=>Object.fromEntries(fields.map(id=>[id,$('#'+id).value]));
 const money=v=>{const n=Number(v);return Number.isFinite(n)?(Number.isInteger(n)?String(n):String(Number(n.toFixed(2)))):'0'};
 function toast(msg){const el=$('#toast');el.textContent=msg;el.classList.add('show');clearTimeout(el.t);el.t=setTimeout(()=>el.classList.remove('show'),2400)}
@@ -17,7 +18,10 @@ function render(){const v=vals();ctx.save();ctx.fillStyle=$('#whiteBg').checked?
   text(v.productName||'产品名称',187,91,18,'700');
   const left=[['打包费',245],['配送费',316],['店铺活动/券',387],['平台红包',458],['下单返豆',529]];left.forEach(([a,y])=>text(a,48,y,24,'650'));text('合计',48,625,27,'800');text('备注',48,718,24,'800');
   [278,349,420,491,562,669].forEach(y=>{ctx.fillStyle='#eef1f4';ctx.fillRect(47,y,704,1)});ctx.fillStyle='#edf3f6';ctx.fillRect(47,676,704,10);
-  if(state.cutout){const scale=Number($('#productScale').value)/100,maxW=430*scale,maxH=600*scale,centerX=400+Number($('#productOffsetX').value),bottomY=700+Number($('#productOffsetY').value),r=Math.min(maxW/state.cutout.width,maxH/state.cutout.height),w=state.cutout.width*r,h=state.cutout.height*r;ctx.save();ctx.shadowColor='rgba(35,26,18,.2)';ctx.shadowBlur=16;ctx.shadowOffsetY=8;ctx.drawImage(state.cutout,centerX-w/2,bottomY-h,w,h);ctx.restore()}else{text(state.cutoutBusy?'AI正在生成立体商品主体…':'点击智能解析生成透明商品主体',400,390,17,'500','#a0a8b6','center')}
+  if(state.cutout){const scale=Number($('#productScale').value)/100,maxW=430*scale,maxH=600*scale,centerX=400+Number($('#productOffsetX').value),bottomY=700+Number($('#productOffsetY').value),r=Math.min(maxW/state.cutout.width,maxH/state.cutout.height),w=state.cutout.width*r,h=state.cutout.height*r;
+    // A compact contact shadow anchors the product to the surface; the soft silhouette shadow adds depth.
+    ctx.save();ctx.filter='blur(10px)';ctx.fillStyle='rgba(38,24,18,.20)';ctx.beginPath();ctx.ellipse(centerX,bottomY+3,Math.max(34,w*.34),Math.max(6,h*.025),0,0,Math.PI*2);ctx.fill();ctx.restore();
+    ctx.save();ctx.shadowColor='rgba(35,26,18,.24)';ctx.shadowBlur=18;ctx.shadowOffsetY=9;ctx.drawImage(state.cutout,centerX-w/2,bottomY-h,w,h);ctx.restore()}else{text(state.cutoutBusy?'AI正在生成立体商品主体…':'点击智能解析生成透明商品主体',400,390,17,'500','#a0a8b6','center')}
   text('¥'+money(v.productPrice),714,105,29,'700','#111a30','right');text('¥'+money(v.packingFee),714,246,25,'650','#111a30','right');
   text('减'+money(v.deliveryDiscount)+'元',592,316,22,'700','#ef2d2d');text('¥3',665,316,20,'500','#8a91a0');text('¥'+money(v.deliveryFee),714,316,25,'650','#111a30','right');
   ctx.save();ctx.fillStyle='#fff0ee';roundedRect(ctx,560,365,128,34,7);ctx.fill();ctx.restore();text('群可再领2元',624,382,18,'650','#ef3a30','center');text('›',711,382,28,'400','#8e96a5','center');
@@ -80,24 +84,42 @@ function pointerToNorm(e){const ir=imageRect();return{x:(e.clientX-ir.x)/ir.w,y:
 function setupCropInteraction(selector,key,after){const box=$(selector);box.addEventListener('pointerdown',e=>{e.preventDefault();box.setPointerCapture(e.pointerId);const p=pointerToNorm(e);state.drag={key,mode:e.target.classList.contains('handle')?'resize':'move',p,c:{...state[key]}}});box.addEventListener('pointermove',e=>{if(!state.drag||state.drag.key!==key)return;const p=pointerToNorm(e),d=state.drag,c=state[key];if(d.mode==='move'){c.x=Math.max(0,Math.min(1-d.c.w,d.c.x+p.x-d.p.x));c.y=Math.max(0,Math.min(1-d.c.h,d.c.y+p.y-d.p.y))}else{c.w=Math.max(.05,Math.min(1-d.c.x,d.c.w+p.x-d.p.x));c.h=Math.max(.07,Math.min(1-d.c.y,d.c.h+p.y-d.p.y))}updateCropBoxes()});box.addEventListener('pointerup',()=>{state.drag=null;if(after)after()})}
 setupCropInteraction('#cropBox','crop',()=>{processCrop();render()});setupCropInteraction('#nameCropBox','nameCrop',null);$('#autoCropBtn').addEventListener('click',()=>{autoCrop();processCrop();render()});
 function cropByNorm(c){const s=state.source,sw=Math.max(1,Math.round(c.w*s.naturalWidth)),sh=Math.max(1,Math.round(c.h*s.naturalHeight)),sx=Math.round(c.x*s.naturalWidth),sy=Math.round(c.y*s.naturalHeight),tmp=document.createElement('canvas');tmp.width=sw;tmp.height=sh;tmp.getContext('2d',{willReadFrequently:true}).drawImage(s,sx,sy,sw,sh,0,0,sw,sh);return tmp}
-function processCrop(){if(!state.source)return;const tmp=cropByNorm(state.crop);state.rawCrop=tmp;const enhanced=enhanceCanvas(tmp);state.thumb=enhanced;state.cutout=null;const short=Math.min(tmp.width,tmp.height);$('#parseStatus').textContent=short<180?'原图较小，将平滑放大后抠图':'选区已更新，请点击智能解析生成透明主体'}
+function processCrop(){if(!state.source)return;const tmp=cropByNorm(state.crop);state.rawCrop=tmp;const enhanced=enhanceCanvas(tmp);state.thumb=enhanced;state.cutout=null;const short=Math.min(tmp.width,tmp.height);$('#parseStatus').textContent=short<180?`选区仅 ${tmp.width}×${tmp.height}，精细模式可2倍增强；高清主图效果更好`:'选区已更新，请点击智能解析生成透明主体'}
 function prepareCutoutCanvas(src){const max=Math.max(src.width,src.height),scale=Math.max(1,Math.min(3,1200/max)),o=document.createElement('canvas');o.width=Math.round(src.width*scale);o.height=Math.round(src.height*scale);const c=o.getContext('2d',{willReadFrequently:true});c.imageSmoothingEnabled=true;c.imageSmoothingQuality='high';c.drawImage(src,0,0,o.width,o.height);return o}
 function enhanceCanvas(src){const base=prepareCutoutCanvas(src),o=document.createElement('canvas');o.width=base.width;o.height=base.height;const c=o.getContext('2d',{willReadFrequently:true});c.filter='contrast(1.025) saturate(1.025)';c.drawImage(base,0,0);c.filter='none';return sharpenCanvas(o,.06)}
 async function aiEnhanceCurrent(){
   if(!state.rawCrop)return false;
   state.cutoutBusy=true;state.cutout=null;render();
   try{
-    const mode=$('#qualityMode').value;let source=mode==='detail'?prepareCutoutCanvas(state.rawCrop):state.thumb||enhanceCanvas(state.rawCrop);
-    if(mode==='detail')$('#parseStatus').textContent='正在保留原图细节并准备精细抠图…';
-    if(mode==='u2net'){$('#parseStatus').textContent='正在加载 U²-NetP 免费稳定模型…';state.cutout=stylizeCutout(await u2netProductCutout(source));state.lastCutoutEngine='u2net'}
+    const mode=$('#qualityMode').value;let source=state.thumb||enhanceCanvas(state.rawCrop);
+    if(mode==='detail'){
+      $('#parseStatus').textContent='正在整图超分增强（无分块接缝）…';
+      try{source=await superResolveWholeCanvas(state.rawCrop)}catch(e){console.warn('Whole-image super resolution fallback',e);source=state.rawCrop}
+      $('#parseStatus').textContent='正在精细清除圆底并塑造立体光影…';state.cutout=stylizeCutout(await u2netProductCutout(source),'detail');state.lastCutoutEngine='detail';
+    }
+    else if(mode==='u2net'){$('#parseStatus').textContent='正在加载 U²-NetP 免费稳定模型…';state.cutout=stylizeCutout(await u2netProductCutout(source),'stable');state.lastCutoutEngine='u2net'}
     else{
       $('#parseStatus').textContent=mode==='detail'?'高精度商品分割中…':(state.modelReady?'轻量模型抠图中…':'正在加载轻量模型…');
-      try{state.cutout=stylizeCutout(await aiProductCutout(source,mode));state.lastCutoutEngine=mode}catch(primaryError){console.warn('Primary cutout failed, switching to U2NetP',primaryError);$('#parseStatus').textContent='主模型不可用，自动切换 U²-NetP…';state.cutout=stylizeCutout(await u2netProductCutout(source));state.lastCutoutEngine='u2net'}
+      try{state.cutout=stylizeCutout(await aiProductCutout(source,mode),mode);state.lastCutoutEngine=mode}catch(primaryError){console.warn('Primary cutout failed, switching to U2NetP',primaryError);$('#parseStatus').textContent='主模型不可用，自动切换 U²-NetP…';state.cutout=stylizeCutout(await u2netProductCutout(source),mode==='detail'?'detail':'stable');state.lastCutoutEngine='u2net'}
     }
     state.cutoutBusy=false;render();return true;
   }catch(e){console.warn('AI product cutout fallback',e);state.cutoutBusy=false;state.cutout=null;render();$('#parseStatus').textContent='两个本地模型均未完成，请检查网络后重试';return false}
 }
 function sharpenCanvas(src,amount){const c=src.getContext('2d',{willReadFrequently:true}),im=c.getImageData(0,0,src.width,src.height),s=im.data,out=new Uint8ClampedArray(s),w=src.width,h=src.height;for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){const i=(y*w+x)*4;for(let k=0;k<3;k++){const sharp=5*s[i+k]-s[i-4+k]-s[i+4+k]-s[i-w*4+k]-s[i+w*4+k];out[i+k]=Math.max(0,Math.min(255,s[i+k]*(1-amount)+sharp*amount))}}im.data.set(out);c.putImageData(im,0,0);return src}
+function loadScript(src,id){
+  if(loadedScripts.has(id))return loadedScripts.get(id);
+  const promise=new Promise((resolve,reject)=>{const existing=document.getElementById(id);if(existing){if(existing.dataset.ready==='1')resolve();else{existing.addEventListener('load',resolve,{once:true});existing.addEventListener('error',reject,{once:true})}return}const script=document.createElement('script');script.id=id;script.src=src;script.crossOrigin='anonymous';script.onload=()=>{script.dataset.ready='1';resolve()};script.onerror=()=>reject(new Error('组件加载失败: '+id));document.head.appendChild(script)});loadedScripts.set(id,promise);return promise;
+}
+async function superResolveWholeCanvas(src){
+  // Whole-image inference is deliberately limited to small thumbnails. It avoids the tile seams that
+  // caused square patches in the old detail mode, while larger originals keep their native pixels.
+  if(Math.max(src.width,src.height)>520)return src;
+  await loadScript('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4/dist/tf.min.js','tfjs-runtime');
+  await Promise.all([loadScript('https://cdn.jsdelivr.net/npm/@upscalerjs/default-model@latest/dist/umd/index.min.js','upscaler-model'),loadScript('https://cdn.jsdelivr.net/npm/upscaler@latest/dist/browser/umd/upscaler.min.js','upscaler-runtime')]);
+  state.detailUpscaler ||= new Upscaler({model:DefaultUpscalerJSModel});
+  const data=await state.detailUpscaler.upscale(src),img=new Image();await new Promise((ok,bad)=>{img.onload=ok;img.onerror=bad;img.src=data});
+  const out=document.createElement('canvas');out.width=img.naturalWidth;out.height=img.naturalHeight;out.getContext('2d',{willReadFrequently:true}).drawImage(img,0,0);return out;
+}
 function trimOuterWhitespace(src){
   const c=src.getContext('2d',{willReadFrequently:true}),d=c.getImageData(0,0,src.width,src.height).data,w=src.width,h=src.height;
   let x0=w,y0=h,x1=-1,y1=-1,count=0;
@@ -106,7 +128,25 @@ function trimOuterWhitespace(src){
   const pad=Math.max(5,Math.round(Math.min(w,h)*.035));x0=Math.max(0,x0-pad);y0=Math.max(0,y0-pad);x1=Math.min(w-1,x1+pad);y1=Math.min(h-1,y1+pad);
   const out=document.createElement('canvas');out.width=x1-x0+1;out.height=y1-y0+1;const oc=out.getContext('2d');oc.fillStyle='#fff';oc.fillRect(0,0,out.width,out.height);oc.drawImage(src,x0,y0,out.width,out.height,0,0,out.width,out.height);return out;
 }
-function stylizeCutout(src){const out=document.createElement('canvas');out.width=src.width;out.height=src.height;const c=out.getContext('2d',{willReadFrequently:true});c.filter='saturate(1.02)';c.drawImage(src,0,0);c.filter='none';return sharpenCanvas(out,.04)}
+function upscaleForPoster(src){
+  const longest=Math.max(src.width,src.height),scale=Math.max(1,Math.min(2.25,900/longest));if(scale<=1.03)return src;
+  const out=document.createElement('canvas');out.width=Math.round(src.width*scale);out.height=Math.round(src.height*scale);const c=out.getContext('2d',{willReadFrequently:true});c.imageSmoothingEnabled=true;c.imageSmoothingQuality='high';c.drawImage(src,0,0,out.width,out.height);return out;
+}
+function unsharpCanvas(src,amount=.45,radius=1.15){
+  const blur=document.createElement('canvas');blur.width=src.width;blur.height=src.height;const bc=blur.getContext('2d',{willReadFrequently:true});bc.filter=`blur(${radius}px)`;bc.drawImage(src,0,0);bc.filter='none';
+  const c=src.getContext('2d',{willReadFrequently:true}),im=c.getImageData(0,0,src.width,src.height),bd=bc.getImageData(0,0,src.width,src.height).data,d=im.data;
+  for(let i=0;i<d.length;i+=4){if(d[i+3]<12)continue;for(let k=0;k<3;k++)d[i+k]=Math.max(0,Math.min(255,d[i+k]+amount*(d[i+k]-bd[i+k])))}c.putImageData(im,0,0);return src;
+}
+function addDepthLighting(src){
+  const out=document.createElement('canvas');out.width=src.width;out.height=src.height;const c=out.getContext('2d');c.drawImage(src,0,0);
+  const layer=document.createElement('canvas');layer.width=src.width;layer.height=src.height;const l=layer.getContext('2d');
+  let g=l.createLinearGradient(0,0,src.width,0);g.addColorStop(0,'rgba(255,255,255,.02)');g.addColorStop(.18,'rgba(255,255,255,.22)');g.addColorStop(.48,'rgba(255,255,255,0)');g.addColorStop(1,'rgba(255,255,255,0)');l.fillStyle=g;l.fillRect(0,0,src.width,src.height);l.globalCompositeOperation='destination-in';l.drawImage(src,0,0);c.save();c.globalCompositeOperation='screen';c.drawImage(layer,0,0);c.restore();
+  l.clearRect(0,0,src.width,src.height);l.globalCompositeOperation='source-over';g=l.createLinearGradient(0,0,src.width,src.height*.35);g.addColorStop(0,'rgba(30,12,8,0)');g.addColorStop(.62,'rgba(30,12,8,.02)');g.addColorStop(1,'rgba(30,12,8,.18)');l.fillStyle=g;l.fillRect(0,0,src.width,src.height);l.globalCompositeOperation='destination-in';l.drawImage(src,0,0);c.save();c.globalCompositeOperation='multiply';c.drawImage(layer,0,0);c.restore();return out;
+}
+function stylizeCutout(src,mode='stable'){
+  const base=upscaleForPoster(src),out=document.createElement('canvas');out.width=base.width;out.height=base.height;const c=out.getContext('2d',{willReadFrequently:true});c.filter=mode==='detail'?'contrast(1.07) saturate(1.08)':'contrast(1.025) saturate(1.035)';c.drawImage(base,0,0);c.filter='none';
+  return addDepthLighting(unsharpCanvas(out,mode==='detail'?.72:.34,mode==='detail'?.95:1.25));
+}
 function canvasToBlob(src){return new Promise((resolve,reject)=>src.toBlob(blob=>blob?resolve(blob):reject(new Error('图片转换失败')),'image/png',1))}
 async function blobToCanvas(blob){const url=URL.createObjectURL(blob),img=new Image();try{await new Promise((ok,bad)=>{img.onload=ok;img.onerror=bad;img.src=url});const out=document.createElement('canvas');out.width=img.naturalWidth;out.height=img.naturalHeight;out.getContext('2d',{willReadFrequently:true}).drawImage(img,0,0);return out}finally{URL.revokeObjectURL(url)}}
 function removeFloatingTags(src){
@@ -115,7 +155,7 @@ function removeFloatingTags(src){
   for(let start=0;start<tag.length;start++){
     if(!tag[start]||seen[start])continue;const q=[start];seen[start]=1;let x0=w,y0=h,x1=0,y1=0,n=0;
     for(let p=0;p<q.length;p++){const i=q[p],x=i%w,y=(i/w)|0;n++;x0=Math.min(x0,x);y0=Math.min(y0,y);x1=Math.max(x1,x);y1=Math.max(y1,y);for(const ni of [x?i-1:-1,x<w-1?i+1:-1,y?i-w:-1,y<h-1?i+w:-1])if(ni>=0&&tag[ni]&&!seen[ni]){seen[ni]=1;q.push(ni)}}
-    const bw=x1-x0+1,bh=y1-y0+1,fill=n/(bw*bh),upper=y0<h*.62,tagShape=bw>w*.045&&bh>h*.025&&bw<w*.62&&bh<h*.28&&(bw/bh>1.05||fill>.48);
+    const bw=x1-x0+1,bh=y1-y0+1,fill=n/(bw*bh),upper=y0<h*.62,outsideProductCenter=x1<w*.43||x0>w*.57,tagShape=outsideProductCenter&&bw>w*.045&&bh>h*.025&&bw<w*.62&&bh<h*.28&&(bw/bh>1.05||fill>.48);
     if(upper&&tagShape){const pad=Math.max(3,Math.round(Math.min(w,h)*.008));for(let y=Math.max(0,y0-pad);y<=Math.min(h-1,y1+pad);y++)for(let x=Math.max(0,x0-pad);x<=Math.min(w-1,x1+pad);x++)d[(y*w+x)*4+3]=0}
   }
   c.putImageData(im,0,0);return trimCanvas(src);
@@ -125,7 +165,7 @@ async function aiProductCutout(src,mode='fast'){
   const {removeBackground}=await bgRemovalModulePromise,input=await canvasToBlob(src),config=backgroundConfig(true,mode);
   let result;try{result=await removeBackground(input,config)}catch(e){if(config.device!=='gpu')throw e;result=await removeBackground(input,{...config,device:'cpu'})}
   state.modelReady=true;
-  $('#parseStatus').textContent='正在清理圆形底图、商品标签和离散装饰…';return keepPrimaryProduct(removeFloatingTags(await blobToCanvas(result)));
+  $('#parseStatus').textContent='正在清理圆形底图、商品标签和离散装饰…';return keepPrimaryProduct(removeEdgeWhite(removeFloatingTags(await blobToCanvas(result))));
 }
 async function u2netProductCutout(src){
   if(!window.RembgWeb||!window.ort)throw new Error('U²-NetP 运行组件未加载');
@@ -133,7 +173,9 @@ async function u2netProductCutout(src){
   rembgConfig.setCustomModelPath('u2netp',modelUrl);
   u2netSession ||= await newSession('u2netp',undefined,{preferWebNN:false,preferWebGPU:false,onProgress:info=>{$('#parseStatus').textContent=`U²-NetP 模型 ${Math.round(info.progress||0)}%`}});
   const result=await remove(await canvasToBlob(src),{session:u2netSession,postProcessMask:true,onProgress:info=>{$('#parseStatus').textContent=`U²-NetP ${info.message||'处理中'} ${Math.round(info.progress||0)}%`}});
-  return keepPrimaryProduct(await blobToCanvas(result));
+  // U²-Net already supplies an object mask. Avoid colour-box deletion here because a coloured logo
+  // can legitimately sit near the product edge and must never be erased as a rectangular "tag".
+  return keepPrimaryProduct(removeEdgeWhite(await blobToCanvas(result)));
 }
 function backgroundConfig(showProgress=false,mode='fast'){const detail=mode==='detail';return{model:detail?'medium':'small',device:navigator.gpu?'gpu':'cpu',output:{format:'image/png',quality:1},progress:showProgress?(key,current,total)=>{if(total>0&&key.startsWith('fetch'))$('#parseStatus').textContent=`${detail?'精细':'轻量'}模型 ${Math.round(current/total*100)}%`;else if(key.startsWith('compute'))$('#parseStatus').textContent=detail?'精细分离商品与圆形底图…':'极速分离商品与背景…'}:undefined}}
 async function warmupCutoutModel(){try{bgRemovalModulePromise ||= import('https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.7.0/+esm');const {preload}=await bgRemovalModulePromise;await preload(backgroundConfig(false,'fast'));state.modelReady=true;$('#globalStatus').innerHTML='<i></i> 极速AI已就绪 · 图片不上传'}catch(e){console.warn('AI preload skipped',e)}}
@@ -142,9 +184,9 @@ function removeEdgeWhite(src){
   const c=out.getContext('2d',{willReadFrequently:true});c.drawImage(src,0,0);
   const im=c.getImageData(0,0,out.width,out.height),d=im.data,w=out.width,h=out.height;
   const seen=new Uint8Array(w*h),protectedPixels=new Uint8Array(w*h),q=new Int32Array(w*h);
-  const isBg=i=>{const k=i*4,r=d[k],g=d[k+1],b=d[k+2],lo=Math.min(r,g,b),hi=Math.max(r,g,b);return lo>212&&hi-lo<34};
+  const isBg=i=>{const k=i*4,r=d[k],g=d[k+1],b=d[k+2],lo=Math.min(r,g,b),hi=Math.max(r,g,b);return d[k+3]<24||(lo>198&&hi-lo<48)};
   // Protect light logos, ice and cup highlights that sit close to definite product colours.
-  const radius=Math.max(8,Math.round(Math.min(w,h)*.025)),protectQ=new Int32Array(w*h),dist=new Uint16Array(w*h);let ph=0,pt=0;
+  const radius=Math.max(3,Math.round(Math.min(w,h)*.01)),protectQ=new Int32Array(w*h),dist=new Uint16Array(w*h);let ph=0,pt=0;
   for(let i=0;i<w*h;i++){const k=i*4,r=d[k],g=d[k+1],b=d[k+2],lo=Math.min(r,g,b),hi=Math.max(r,g,b);if(lo<188||hi-lo>52){protectedPixels[i]=1;protectQ[pt++]=i}}
   while(ph<pt){const i=protectQ[ph++],di=dist[i];if(di>=radius)continue;const x=i%w,y=(i/w)|0;for(const ni of [x?i-1:-1,x<w-1?i+1:-1,y?i-w:-1,y<h-1?i+w:-1])if(ni>=0&&!protectedPixels[ni]){protectedPixels[ni]=1;dist[ni]=di+1;protectQ[pt++]=ni}}
   let a=0,z=0;const push=i=>{if(!seen[i]&&!protectedPixels[i]&&isBg(i)){seen[i]=1;q[z++]=i}};
