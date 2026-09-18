@@ -184,11 +184,15 @@ function removeEdgeWhite(src){
   const c=out.getContext('2d',{willReadFrequently:true});c.drawImage(src,0,0);
   const im=c.getImageData(0,0,out.width,out.height),d=im.data,w=out.width,h=out.height;
   const seen=new Uint8Array(w*h),protectedPixels=new Uint8Array(w*h),q=new Int32Array(w*h);
-  const isBg=i=>{const k=i*4,r=d[k],g=d[k+1],b=d[k+2],lo=Math.min(r,g,b),hi=Math.max(r,g,b);return d[k+3]<24||(lo>198&&hi-lo<48)};
-  // Protect light logos, ice and cup highlights that sit close to definite product colours.
-  const radius=Math.max(3,Math.round(Math.min(w,h)*.01)),protectQ=new Int32Array(w*h),dist=new Uint16Array(w*h);let ph=0,pt=0;
-  for(let i=0;i<w*h;i++){const k=i*4,r=d[k],g=d[k+1],b=d[k+2],lo=Math.min(r,g,b),hi=Math.max(r,g,b);if(lo<188||hi-lo>52){protectedPixels[i]=1;protectQ[pt++]=i}}
-  while(ph<pt){const i=protectQ[ph++],di=dist[i];if(di>=radius)continue;const x=i%w,y=(i/w)|0;for(const ni of [x?i-1:-1,x<w-1?i+1:-1,y?i-w:-1,y<h-1?i+w:-1])if(ni>=0&&!protectedPixels[ni]){protectedPixels[ni]=1;dist[ni]=di+1;protectQ[pt++]=ni}}
+  const isBg=i=>{const k=i*4,r=d[k],g=d[k+1],b=d[k+2],lo=Math.min(r,g,b),hi=Math.max(r,g,b),warmNeutral=lo>165&&r>=g-5&&r-g<20&&g>=b-5&&g-b<30,nearWhite=lo>225&&hi-lo<24;return d[k+3]<24||warmNeutral||nearWhite};
+  // Grow a silhouette from high-confidence product colours, then close each row between the grown
+  // edges. This follows the cup/ice shape closely enough to reject a wider circular card background,
+  // while the growth radius preserves pale milk, clear ice and white logos around the coloured core.
+  const core=new Uint8Array(w*h),nearCore=new Uint8Array(w*h),distance=new Uint16Array(w*h),growQ=new Int32Array(w*h);let growHead=0,growTail=0;
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=y*w+x,k=i*4,r=d[k],g=d[k+1],b=d[k+2],lo=Math.min(r,g,b),hi=Math.max(r,g,b);if(d[k+3]>28&&(lo<122||hi-lo>72)){core[i]=1;nearCore[i]=1;growQ[growTail++]=i}}
+  const growRadius=Math.max(7,Math.round(Math.min(w,h)*.055));
+  while(growHead<growTail){const i=growQ[growHead++],di=distance[i];if(di>=growRadius)continue;const x=i%w,y=(i/w)|0;for(const ni of [x?i-1:-1,x<w-1?i+1:-1,y?i-w:-1,y<h-1?i+w:-1])if(ni>=0&&!nearCore[ni]){nearCore[ni]=1;distance[ni]=di+1;growQ[growTail++]=ni}}
+  for(let y=0;y<h;y++){let x0=w,x1=-1;for(let x=0;x<w;x++)if(nearCore[y*w+x]){x0=Math.min(x0,x);x1=x}if(x1>=0)for(let x=x0;x<=x1;x++)protectedPixels[y*w+x]=1}
   let a=0,z=0;const push=i=>{if(!seen[i]&&!protectedPixels[i]&&isBg(i)){seen[i]=1;q[z++]=i}};
   for(let x=0;x<w;x++){push(x);push((h-1)*w+x)}for(let y=0;y<h;y++){push(y*w);push(y*w+w-1)}
   while(a<z){const i=q[a++],x=i%w,y=(i/w)|0;if(x)push(i-1);if(x<w-1)push(i+1);if(y)push(i-w);if(y<h-1)push(i+w)}
