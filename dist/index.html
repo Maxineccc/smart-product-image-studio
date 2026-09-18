@@ -8,11 +8,11 @@
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23ff5a1f'/%3E%3Cpath d='M17 17h30v30H17z' fill='white' opacity='.96'/%3E%3Ccircle cx='25' cy='25' r='4' fill='%23ff5a1f'/%3E%3Cpath d='M20 42l9-10 7 7 5-6 4 9z' fill='%23ff5a1f'/%3E%3C/svg%3E" />
   <title>智能商品图生成器</title>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
-  <link rel="stylesheet" href="./styles.css?v=13" />
+  <link rel="stylesheet" href="./styles.css?v=14" />
 </head>
 <body>
   <header class="topbar">
-    <div class="brand"><span class="brand-mark">图</span><div><strong>智能商品图生成器 <em class="version-badge">v1.7.3</em></strong><small>豆包绿幕去底 · 免费本地组合 · 800×800导出</small></div></div>
+    <div class="brand"><span class="brand-mark">图</span><div><strong>智能商品图生成器 <em class="version-badge">v1.7.4</em></strong><small>商品图排版 · 免费本地处理 · 800×800导出</small></div></div>
     <div class="status-pill" id="globalStatus"><i></i> 本地处理，不上传原图</div>
   </header>
 
@@ -36,16 +36,6 @@
         <div class="crop-stage" id="cropStage"><img id="sourceImage" alt="上传的商品截图" /><div id="cropBox" class="crop-box" tabindex="0" aria-label="商品区域选择框"><b class="handle br"></b></div><div id="nameCropBox" class="crop-box name-crop-box" tabindex="0" aria-label="商品名称选择框"><b class="handle br"></b></div></div>
         <div class="mode-row"><label>处理模型<select id="qualityMode"><option value="u2net" selected>稳定抠图（推荐）</option><option value="detail">精细立体抠图</option><option value="fast">轻量快速抠图</option></select></label><small>精细模式会清理圆底、保留原始像素并增强清晰度与立体光影</small></div>
         <div class="parse-row"><button class="secondary" id="parseBtn" type="button">智能解析当前图</button><span id="parseStatus">轻量AI将提前缓存</span></div>
-      </div>
-
-      <div class="green-card">
-        <div><strong>豆包绿幕图（最稳定）</strong><small>先在豆包生成纯绿色背景商品图，再上传到这里自动去绿并替换中间主体</small></div>
-        <div class="green-actions">
-          <label class="secondary upload-secondary" for="greenScreenInput">上传豆包绿幕图<input id="greenScreenInput" type="file" accept="image/png,image/jpeg,image/webp" /></label>
-          <button class="text-btn" id="openDoubaoBtn" type="button">① 复制参考图并打开豆包</button>
-          <button class="text-btn" id="copyGreenPrompt" type="button">② 复制提示词</button>
-        </div>
-        <span id="greenStatus">先粘贴参考图，再复制提示词；无需方舟API</span>
       </div>
 
       <div class="section-title"><span class="step">02</span><h2>校正识别结果</h2></div>
@@ -83,6 +73,6 @@
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.23.0/dist/ort.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/@bunnio/rembg-web@1.0.2/dist/index.umd.min.js" defer></script>
-  <script src="./app.js?v=18" defer></script>
+  <script src="./app.js?v=19" defer></script>
 </body>
 </html>
