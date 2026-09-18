@@ -4,22 +4,22 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#ff5a1f" />
-  <meta name="description" content="支持方形与横版商品模板、透明PNG原图图层、品牌文字和主体位置编辑。" />
+  <meta name="description" content="支持多套方形与横版商品模板、统一淘宝闪购Logo、单图批量裂变和透明商品主体编辑。" />
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23ff5a1f'/%3E%3Cpath d='M17 17h30v30H17z' fill='white' opacity='.96'/%3E%3Ccircle cx='25' cy='25' r='4' fill='%23ff5a1f'/%3E%3Cpath d='M20 42l9-10 7 7 5-6 4 9z' fill='%23ff5a1f'/%3E%3C/svg%3E" />
   <title>智能商品图生成器</title>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
-  <link rel="stylesheet" href="./styles.css?v=17" />
+  <link rel="stylesheet" href="./styles.css?v=18" />
 </head>
 <body>
   <header class="topbar">
-    <div class="brand"><span class="brand-mark">图</span><div><strong>智能商品图生成器 <em class="version-badge">v2.1.1</em></strong><small>双模板排版 · 豆包纯色底去除 · 本地导出</small></div></div>
+    <div class="brand"><span class="brand-mark">图</span><div><strong>智能商品图生成器 <em class="version-badge">v2.2.0</em></strong><small>六套模板裂变 · 统一闪购Logo · 批量导出</small></div></div>
     <div class="status-pill" id="globalStatus"><i></i> 本地处理，不上传原图</div>
   </header>
 
   <main class="workspace">
     <section class="panel controls" aria-label="商品设置">
       <div class="template-card">
-        <label>选择模板<select id="templateSelect"><option value="square">方形结算单 · 800×800</option><option value="cafe">横版咖啡闪购 · 1280×720</option></select></label>
+        <label>选择模板<select id="templateSelect"><option value="square">方形结算单 · 800×800</option><option value="squareHero">方形橙红爆款 · 800×800</option><option value="squareFresh">方形清新推荐 · 800×800</option><option value="cafe">横版咖啡场景 · 1280×720</option><option value="landscapeClean">横版简洁好价 · 1280×720</option><option value="landscapeDark">横版质感上新 · 1280×720</option></select></label>
         <small id="templateHint">适合费用明细与到手价展示</small>
       </div>
 
@@ -51,17 +51,17 @@
 
       <div class="section-title"><span class="step">02</span><h2>校正识别结果</h2></div>
       <div class="form-grid">
-        <label class="wide landscape-only" hidden>品牌名称<input id="brandName" value="星巴克" maxlength="10" /></label>
-        <label class="wide square-only">产品名称<input id="productName" value="抹茶丝绒拿铁" maxlength="16" /></label>
-        <label class="square-only">产品价格<input id="productPrice" type="number" value="23.1" min="0" step="0.01" /></label>
-        <label class="square-only">红包金额<input id="redEnvelope" type="number" value="20" min="0" step="1" /></label>
-        <label class="square-only">新人最高红包<input id="newUserMax" type="number" value="20" min="0" step="1" /></label>
-        <label class="square-only">打包费<input id="packingFee" type="number" value="1" min="0" step="1" /></label>
-        <label class="square-only">配送费<input id="deliveryFee" type="number" value="0" min="0" step="1" /></label>
-        <label class="square-only">配送立减<input id="deliveryDiscount" type="number" value="3" min="0" step="1" /></label>
-        <label class="square-only">到手价<input id="finalPrice" type="number" value="0.01" min="0" step="0.01" /></label>
+        <label class="wide">品牌名称<input id="brandName" value="星巴克" maxlength="10" /></label>
+        <label class="wide">产品名称<input id="productName" value="抹茶丝绒拿铁" maxlength="16" /></label>
+        <label>产品价格<input id="productPrice" type="number" value="23.1" min="0" step="0.01" /></label>
+        <label>到手价<input id="finalPrice" type="number" value="0.01" min="0" step="0.01" /></label>
+        <label class="receipt-only">红包金额<input id="redEnvelope" type="number" value="20" min="0" step="1" /></label>
+        <label class="receipt-only">新人最高红包<input id="newUserMax" type="number" value="20" min="0" step="1" /></label>
+        <label class="receipt-only">打包费<input id="packingFee" type="number" value="1" min="0" step="1" /></label>
+        <label class="receipt-only">配送费<input id="deliveryFee" type="number" value="0" min="0" step="1" /></label>
+        <label class="receipt-only">配送立减<input id="deliveryDiscount" type="number" value="3" min="0" step="1" /></label>
       </div>
-      <label class="switch-row square-only"><input id="whiteBg" type="checkbox" checked /><span></span><b>强制纯白背景</b></label>
+      <label class="switch-row receipt-only"><input id="whiteBg" type="checkbox" checked /><span></span><b>强制纯白背景</b></label>
 
       <div class="tune-card">
         <div class="tune-head"><div><span class="step">03</span><h2>主体位置微调</h2></div><button class="text-btn" id="resetPlacement" type="button">恢复居中</button></div>
@@ -79,7 +79,7 @@
       <div class="canvas-shell"><canvas id="outputCanvas" width="800" height="800" aria-label="商品营销图预览"></canvas></div>
       <div class="export-row">
         <div><strong id="exportMeta">800×800 · 预计小于400 KB</strong><small id="exportHint">JPG，白色补边，不裁切文字</small></div>
-        <button class="primary" id="downloadBtn" type="button">下载成品图</button>
+        <div class="export-actions"><button class="secondary" id="downloadAllBtn" type="button">批量下载全部模板</button><button class="primary" id="downloadBtn" type="button">下载当前模板</button></div>
       </div>
     </section>
   </main>
@@ -88,6 +88,7 @@
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.23.0/dist/ort.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/@bunnio/rembg-web@1.0.2/dist/index.umd.min.js" defer></script>
-  <script src="./app.js?v=24" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js" defer></script>
+  <script src="./app.js?v=25" defer></script>
 </body>
 </html>
