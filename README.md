@@ -1,6 +1,11 @@
 # 智能商品图生成器
 
-商品抠图使用 IMG.LY 的 `@imgly/background-removal` 浏览器端模型，图片仅在本机浏览器中处理。该依赖遵循其项目许可证，来源：https://github.com/imgly/background-removal-js
+商品抠图使用双模型浏览器端方案，图片仅在本机浏览器中处理，不调用付费 API：
+
+- 精细/轻量主模型：IMG.LY `@imgly/background-removal`，AGPL-3.0，来源：https://github.com/imgly/background-removal-js
+- 免费备用模型：U²-NetP（Apache-2.0），通过 MIT 许可的 `@bunnio/rembg-web` 与 ONNX Runtime Web 执行。模型来源：https://github.com/bunn-io/rembg-web/releases/tag/base-models
+
+U²-NetP 模型文件 SHA-256：`309C8469258DDA742793DCE0EBEA8E6DD393174F89934733ECC8B14C76F4DDD8`。
 
 上传商品截图，分别框选商品图与商品名称，自动识别文字、增强商品图，并导出白底 800×800、低于 400 KB 的 JPG。
 
