@@ -12,7 +12,7 @@
 </head>
 <body>
   <header class="topbar">
-    <div class="brand"><span class="brand-mark">图</span><div><strong>智能商品图生成器 <em class="version-badge">v1.7</em></strong><small>豆包绿幕去底 · 免费本地组合 · 800×800导出</small></div></div>
+    <div class="brand"><span class="brand-mark">图</span><div><strong>智能商品图生成器 <em class="version-badge">v1.7.1</em></strong><small>豆包绿幕去底 · 免费本地组合 · 800×800导出</small></div></div>
     <div class="status-pill" id="globalStatus"><i></i> 本地处理，不上传原图</div>
   </header>
 
@@ -42,9 +42,9 @@
         <div><strong>豆包绿幕图（最稳定）</strong><small>先在豆包生成纯绿色背景商品图，再上传到这里自动去绿并替换中间主体</small></div>
         <div class="green-actions">
           <label class="secondary upload-secondary" for="greenScreenInput">上传豆包绿幕图<input id="greenScreenInput" type="file" accept="image/png,image/jpeg,image/webp" /></label>
-          <button class="text-btn" id="copyGreenPrompt" type="button">复制豆包提示词</button>
+          <button class="text-btn" id="openDoubaoBtn" type="button">一键打开豆包生成</button>
         </div>
-        <span id="greenStatus">无需方舟API，不消耗网站额度</span>
+        <span id="greenStatus">点击后自动复制提示词并打开豆包，无需方舟API</span>
       </div>
 
       <div class="section-title"><span class="step">02</span><h2>校正识别结果</h2></div>
@@ -82,6 +82,6 @@
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.23.0/dist/ort.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/@bunnio/rembg-web@1.0.2/dist/index.umd.min.js" defer></script>
-  <script src="./app.js?v=15" defer></script>
+  <script src="./app.js?v=16" defer></script>
 </body>
 </html>
