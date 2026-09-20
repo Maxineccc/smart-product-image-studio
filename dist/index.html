@@ -8,27 +8,29 @@
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23ff5a1f'/%3E%3Cpath d='M17 17h30v30H17z' fill='white' opacity='.96'/%3E%3Ccircle cx='25' cy='25' r='4' fill='%23ff5a1f'/%3E%3Cpath d='M20 42l9-10 7 7 5-6 4 9z' fill='%23ff5a1f'/%3E%3C/svg%3E" />
   <title>智能商品图生成器</title>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
-  <link rel="stylesheet" href="./styles.css?v=18" />
+  <link rel="stylesheet" href="./styles.css?v=19" />
 </head>
 <body>
   <header class="topbar">
-    <div class="brand"><span class="brand-mark">图</span><div><strong>智能商品图生成器 <em class="version-badge">v2.2.1</em></strong><small>六套模板裂变 · 统一闪购Logo · 批量导出</small></div></div>
+    <div class="brand"><span class="brand-mark">图</span><div><strong>智能商品图生成器 <em class="version-badge">v2.3.0</em></strong><small>上传豆包成品 · 按尺寸选模板 · 批量导出</small></div></div>
     <div class="status-pill" id="globalStatus"><i></i> 本地处理，不上传原图</div>
   </header>
 
   <main class="workspace">
     <section class="panel controls" aria-label="商品设置">
       <div class="template-card">
-        <label>选择模板<select id="templateSelect"><option value="square">方形结算单 · 800×800</option><option value="squareHero">方形橙红爆款 · 800×800</option><option value="squareFresh">方形清新推荐 · 800×800</option><option value="cafe">横版咖啡场景 · 1280×720</option><option value="landscapeClean">横版简洁好价 · 1280×720</option><option value="landscapeDark">横版质感上新 · 1280×720</option></select></label>
+        <label>当前预览模板<select id="templateSelect"><option value="square">方形结算单 · 800×800</option><option value="squareHero">方形橙红爆款 · 800×800</option><option value="squareFresh">方形清新推荐 · 800×800</option><option value="cafe">横版咖啡场景 · 1280×720</option><option value="landscapeClean">横版简洁好价 · 1280×720</option><option value="landscapeDark">横版质感上新 · 1280×720</option></select></label>
         <small id="templateHint">适合费用明细与到手价展示</small>
       </div>
 
-      <div class="direct-card">
-        <div><strong>商品主体图层</strong><small>真透明图直接载入；豆包图片请使用纯品红底模式自动转透明</small></div>
-        <div class="direct-actions"><label class="secondary direct-upload" for="subjectInput">上传透明主体<input id="subjectInput" type="file" accept="image/png,image/webp" /></label><label class="secondary direct-upload chroma-upload" for="chromaInput">上传豆包纯色底图<input id="chromaInput" type="file" accept="image/png,image/jpeg,image/webp" /></label><button class="text-btn" id="copyChromaPrompt" type="button">复制豆包纯色底话术</button></div>
-        <span id="subjectStatus">未上传 · 豆包建议使用纯品红色 #FF00FF 背景</span>
+      <div class="panel-head"><div><span class="step">01</span><h1>上传豆包处理好的商品图</h1></div><span class="privacy">图片仅在浏览器处理</span></div>
+      <div class="direct-card upload-main">
+        <div><strong>选择豆包成品图</strong><small>真透明 PNG/WebP 直接使用；纯品红底图片会自动去底色和描边</small></div>
+        <div class="direct-actions"><label class="secondary direct-upload" for="subjectInput">上传透明底成品<input id="subjectInput" type="file" accept="image/png,image/webp" /></label><label class="secondary direct-upload chroma-upload" for="chromaInput">上传豆包纯色底成品<input id="chromaInput" type="file" accept="image/png,image/jpeg,image/webp" /></label><button class="text-btn" id="copyChromaPrompt" type="button">复制豆包纯色底话术</button></div>
+        <span id="subjectStatus">请上传一张豆包处理好的商品图</span>
       </div>
 
+      <div class="legacy-auto" hidden>
       <div class="panel-head"><div><span class="step">01</span><h1>上传商品截图</h1></div><span class="privacy">图片仅在浏览器处理</span></div>
       <label class="dropzone" id="dropzone" for="fileInput">
         <input id="fileInput" type="file" accept="image/png,image/jpeg,image/webp" multiple />
@@ -48,6 +50,7 @@
         <div class="mode-row"><label>处理模型<select id="qualityMode"><option value="u2net" selected>稳定抠图（推荐）</option><option value="detail">精细立体抠图</option><option value="fast">轻量快速抠图</option></select></label><small>精细模式会清理圆底、保留原始像素并增强清晰度与立体光影</small></div>
         <div class="parse-row"><button class="secondary" id="parseBtn" type="button">智能解析当前图</button><span id="parseStatus">轻量AI将提前缓存</span></div>
       </div>
+      </div>
 
       <div class="section-title"><span class="step">02</span><h2>校正识别结果</h2></div>
       <div class="form-grid">
@@ -63,8 +66,14 @@
       </div>
       <label class="switch-row receipt-only"><input id="whiteBg" type="checkbox" checked /><span></span><b>强制纯白背景</b></label>
 
+      <div class="section-title template-pick-title"><span class="step">03</span><h2>选择需要生成的模板</h2><label class="select-all"><input id="selectAllTemplates" type="checkbox" checked /> 全选</label></div>
+      <div class="template-picks" id="templatePicks">
+        <fieldset><legend>方形 · 800×800</legend><label><input type="checkbox" name="templatePick" value="square" checked /><span><b>结算单</b><small>费用明细</small></span></label><label><input type="checkbox" name="templatePick" value="squareHero" checked /><span><b>橙红爆款</b><small>强促销</small></span></label><label><input type="checkbox" name="templatePick" value="squareFresh" checked /><span><b>清新推荐</b><small>饮品轻食</small></span></label></fieldset>
+        <fieldset><legend>横版 · 1280×720</legend><label><input type="checkbox" name="templatePick" value="cafe" checked /><span><b>咖啡场景</b><small>品牌氛围</small></span></label><label><input type="checkbox" name="templatePick" value="landscapeClean" checked /><span><b>简洁好价</b><small>电商横幅</small></span></label><label><input type="checkbox" name="templatePick" value="landscapeDark" checked /><span><b>质感上新</b><small>新品质感</small></span></label></fieldset>
+      </div>
+
       <div class="tune-card">
-        <div class="tune-head"><div><span class="step">03</span><h2>主体位置微调</h2></div><button class="text-btn" id="resetPlacement" type="button">恢复居中</button></div>
+        <div class="tune-head"><div><span class="step">04</span><h2>主体位置微调</h2></div><button class="text-btn" id="resetPlacement" type="button">恢复居中</button></div>
         <label><span>主体大小 <output id="productScaleValue">100%</output></span><input id="productScale" type="range" min="30" max="180" value="100" step="1" /></label>
         <label><span>左右位置 <output id="productOffsetXValue">0</output></span><input id="productOffsetX" type="range" min="-260" max="260" value="0" step="1" /></label>
         <label><span>上下位置 <output id="productOffsetYValue">0</output></span><input id="productOffsetY" type="range" min="-180" max="160" value="0" step="1" /></label>
@@ -75,20 +84,17 @@
     </section>
 
     <section class="panel preview-panel" aria-label="导出预览">
-      <div class="panel-head"><div><span class="step">04</span><h2>实时预览</h2></div><span class="size-chip" id="sizeChip">800 × 800</span></div>
+      <div class="panel-head"><div><span class="step">05</span><h2>实时预览</h2></div><span class="size-chip" id="sizeChip">800 × 800</span></div>
       <div class="canvas-shell"><canvas id="outputCanvas" width="800" height="800" aria-label="商品营销图预览"></canvas></div>
       <div class="export-row">
         <div><strong id="exportMeta">800×800 · 预计小于400 KB</strong><small id="exportHint">JPG，白色补边，不裁切文字</small></div>
-        <div class="export-actions"><button class="secondary" id="downloadAllBtn" type="button">批量下载全部模板</button><button class="primary" id="downloadBtn" type="button">下载当前模板</button></div>
+        <div class="export-actions"><button class="secondary" id="downloadAllBtn" type="button">生成已选模板</button><button class="primary" id="downloadBtn" type="button">下载当前模板</button></div>
       </div>
     </section>
   </main>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" defer></script>
-  <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.23.0/dist/ort.min.js" defer></script>
-  <script src="https://cdn.jsdelivr.net/npm/@bunnio/rembg-web@1.0.2/dist/index.umd.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js" defer></script>
-  <script src="./app.js?v=26" defer></script>
+  <script src="./app.js?v=27" defer></script>
 </body>
 </html>
