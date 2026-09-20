@@ -8,11 +8,11 @@
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23ff5a1f'/%3E%3Cpath d='M17 17h30v30H17z' fill='white' opacity='.96'/%3E%3Ccircle cx='25' cy='25' r='4' fill='%23ff5a1f'/%3E%3Cpath d='M20 42l9-10 7 7 5-6 4 9z' fill='%23ff5a1f'/%3E%3C/svg%3E" />
   <title>智能商品图生成器</title>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
-  <link rel="stylesheet" href="./styles.css?v=22" />
+  <link rel="stylesheet" href="./styles.css?v=23" />
 </head>
 <body>
   <header class="topbar">
-    <div class="brand"><span class="brand-mark">图</span><div><strong>智能商品图生成器 <em class="version-badge">v2.7.0</em></strong><small>上传豆包成品 · 按尺寸选模板 · 批量导出</small></div></div>
+    <div class="brand"><span class="brand-mark">图</span><div><strong>智能商品图生成器 <em class="version-badge">v2.8.0</em></strong><small>上传豆包成品 · 按尺寸选模板 · 批量导出</small></div></div>
     <div class="status-pill" id="globalStatus"><i></i> 本地处理，不上传原图</div>
   </header>
 
@@ -76,8 +76,8 @@
 
       <div class="section-title template-pick-title"><span class="step">04</span><h2>选择需要生成的模板</h2><label class="select-all"><input id="selectAllTemplates" type="checkbox" checked /> 全选</label></div>
       <div class="template-picks" id="templatePicks">
-        <fieldset><legend>方形 · 800×800</legend><label><input type="checkbox" name="templatePick" value="square" checked /><span><b>结算单</b><small>费用明细</small></span></label><label><input type="checkbox" name="templatePick" value="socialCoupon" checked /><span><b>红包券卡</b><small>优惠领取</small></span></label><label><input type="checkbox" name="templatePick" value="socialMinimal" checked /><span><b>留白单品</b><small>简洁推荐</small></span></label><label><input type="checkbox" name="templatePick" value="socialDeal" checked /><span><b>左右好价</b><small>价格突出</small></span></label><label><input type="checkbox" name="templatePick" value="socialDuo" checked /><span><b>双杯下单</b><small>同款组合</small></span></label><label><input type="checkbox" name="templatePick" value="socialScene" checked /><span><b>场景种草</b><small>生活氛围</small></span></label><label><input type="checkbox" name="templatePick" value="squareBestseller" checked /><span><b>爆款咖啡</b><small>标题可编辑</small></span></label></fieldset>
-        <fieldset><legend>横版 · 1280×720</legend><label><input type="checkbox" name="templatePick" value="cafe" checked /><span><b>咖啡场景</b><small>品牌氛围</small></span></label><label><input type="checkbox" name="templatePick" value="landscapeClean" checked /><span><b>简洁好价</b><small>电商横幅</small></span></label><label><input type="checkbox" name="templatePick" value="landscapeDark" checked /><span><b>质感上新</b><small>新品质感</small></span></label></fieldset>
+        <fieldset><legend>方形 · 800×800</legend><label><img class="template-thumb" data-template="square" alt="结算单模板缩略图" /><input type="checkbox" name="templatePick" value="square" checked /><span><b>结算单</b><small>费用明细</small></span></label><label><img class="template-thumb" data-template="socialCoupon" alt="红包券卡模板缩略图" /><input type="checkbox" name="templatePick" value="socialCoupon" checked /><span><b>红包券卡</b><small>优惠领取</small></span></label><label><img class="template-thumb" data-template="socialMinimal" alt="留白单品模板缩略图" /><input type="checkbox" name="templatePick" value="socialMinimal" checked /><span><b>留白单品</b><small>简洁推荐</small></span></label><label><img class="template-thumb" data-template="socialDeal" alt="左右好价模板缩略图" /><input type="checkbox" name="templatePick" value="socialDeal" checked /><span><b>左右好价</b><small>价格突出</small></span></label><label><img class="template-thumb" data-template="socialDuo" alt="双杯下单模板缩略图" /><input type="checkbox" name="templatePick" value="socialDuo" checked /><span><b>双杯下单</b><small>同款组合</small></span></label><label><img class="template-thumb" data-template="socialScene" alt="场景种草模板缩略图" /><input type="checkbox" name="templatePick" value="socialScene" checked /><span><b>场景种草</b><small>生活氛围</small></span></label><label><img class="template-thumb" data-template="squareBestseller" alt="爆款咖啡模板缩略图" /><input type="checkbox" name="templatePick" value="squareBestseller" checked /><span><b>爆款咖啡</b><small>标题可编辑</small></span></label></fieldset>
+        <fieldset><legend>横版 · 1280×720</legend><label><img class="template-thumb" data-template="cafe" alt="咖啡场景模板缩略图" /><input type="checkbox" name="templatePick" value="cafe" checked /><span><b>咖啡场景</b><small>品牌氛围</small></span></label><label><img class="template-thumb" data-template="landscapeClean" alt="简洁好价模板缩略图" /><input type="checkbox" name="templatePick" value="landscapeClean" checked /><span><b>简洁好价</b><small>电商横幅</small></span></label><label><img class="template-thumb" data-template="landscapeDark" alt="质感上新模板缩略图" /><input type="checkbox" name="templatePick" value="landscapeDark" checked /><span><b>质感上新</b><small>新品质感</small></span></label></fieldset>
       </div>
 
       <div class="tune-card">
@@ -103,6 +103,6 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js" defer></script>
-  <script src="./app.js?v=35" defer></script>
+  <script src="./app.js?v=36" defer></script>
 </body>
 </html>
