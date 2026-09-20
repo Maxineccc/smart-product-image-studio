@@ -24,7 +24,7 @@ function renderSquare(){const v=vals();ctx.save();ctx.fillStyle=$('#whiteBg').ch
   text(v.productName||'产品名称',187,91,18,'700');
   const left=[['打包费',245],['配送费',316],['店铺活动/券',387],['平台红包',458],['下单返豆',529]];left.forEach(([a,y])=>text(a,48,y,24,'650'));text('合计',48,625,27,'800');text('备注',48,718,24,'800');
   [278,349,420,491,562,669].forEach(y=>{ctx.fillStyle='#eef1f4';ctx.fillRect(47,y,704,1)});ctx.fillStyle='#edf3f6';ctx.fillRect(47,676,704,10);
-  drawSubject(410+Number($('#productOffsetX').value),690+Number($('#productOffsetY').value),350,500,'上传透明PNG或点击智能解析');
+  drawSubject(410+Number($('#productOffsetX').value),680+Number($('#productOffsetY').value),295,420,'上传透明PNG或点击智能解析');
   text('¥'+money(v.productPrice),714,105,29,'700','#111a30','right');text('¥'+money(v.packingFee),714,246,25,'650','#111a30','right');
   text('减'+money(v.deliveryDiscount)+'元',592,316,22,'700','#ef2d2d');text('¥3',665,316,20,'500','#8a91a0');text('¥'+money(v.deliveryFee),714,316,25,'650','#111a30','right');
   ctx.save();ctx.fillStyle='#fff0ee';roundedRect(ctx,560,365,128,34,7);ctx.fill();ctx.restore();text('群可再领2元',624,382,18,'650','#ef3a30','center');text('›',711,382,28,'400','#8e96a5','center');
