@@ -12,7 +12,7 @@
 </head>
 <body>
   <header class="topbar">
-    <div class="brand"><span class="brand-mark">图</span><div><strong>智能商品图生成器 <em class="version-badge">v3.2.1</em></strong><small>上传豆包成品 · 按尺寸选模板 · 批量导出</small></div></div>
+    <div class="brand"><span class="brand-mark">图</span><div><strong>智能商品图生成器 <em class="version-badge">v3.3.0</em></strong><small>上传豆包成品 · 按尺寸选模板 · 批量导出</small></div></div>
     <div class="status-pill" id="globalStatus"><i></i> 本地处理，不上传原图</div>
   </header>
 
@@ -80,8 +80,14 @@
         <fieldset><legend>横版 · 1280×720</legend><label><img class="template-thumb" data-template="cafe" alt="咖啡场景模板缩略图" /><input type="checkbox" name="templatePick" value="cafe" checked /><span><b>咖啡场景</b><small>品牌氛围</small></span></label><label><img class="template-thumb" data-template="greenFresh" alt="清爽果茶模板缩略图" /><input type="checkbox" name="templatePick" value="greenFresh" checked /><span><b>清爽果茶</b><small>绿色清新</small></span></label><label><img class="template-thumb" data-template="streetDeal" alt="街景福利模板缩略图" /><input type="checkbox" name="templatePick" value="streetDeal" checked /><span><b>街景福利</b><small>户外氛围</small></span></label><label><img class="template-thumb" data-template="landscapeClean" alt="简洁好价模板缩略图" /><input type="checkbox" name="templatePick" value="landscapeClean" checked /><span><b>简洁好价</b><small>电商横幅</small></span></label><label><img class="template-thumb" data-template="landscapeDark" alt="质感上新模板缩略图" /><input type="checkbox" name="templatePick" value="landscapeDark" checked /><span><b>质感上新</b><small>新品质感</small></span></label></fieldset>
       </div>
 
+      <div class="tune-card background-card">
+        <div class="tune-head"><div><span class="step">05</span><h2>模板底色调色（仅当前模板）</h2></div><button class="text-btn" id="resetTemplateBg" type="button">恢复默认</button></div>
+        <div class="color-tools"><label class="color-swatch"><span>点击色块自由选色</span><input id="templateBgColor" type="color" value="#ffffff" /></label><label class="hex-field"><span>HEX 色值</span><input id="templateBgHex" value="#FFFFFF" maxlength="7" spellcheck="false" /></label><button class="secondary eyedropper-btn" id="pickScreenColor" type="button">吸管取色</button></div>
+        <div class="layer-switches"><label class="switch-row"><input id="templateBgEnabled" type="checkbox" /><span></span><b>启用自定义底色</b></label><small>状态：<b id="templateBgState">未启用</b> · 颜色会随当前模板单独保存</small></div>
+      </div>
+
       <div class="tune-card">
-        <div class="tune-head"><div><span class="step">05</span><h2>主体位置微调（仅当前模板）</h2></div><button class="text-btn" id="resetPlacement" type="button">恢复居中</button></div>
+        <div class="tune-head"><div><span class="step">06</span><h2>主体位置微调（仅当前模板）</h2></div><button class="text-btn" id="resetPlacement" type="button">恢复居中</button></div>
         <label><span>主体大小 <output id="productScaleValue">100%</output></span><input id="productScale" type="range" min="30" max="180" value="100" step="1" /></label>
         <label><span>左右位置 <output id="productOffsetXValue">0</output></span><input id="productOffsetX" type="range" min="-260" max="260" value="0" step="1" /></label>
         <label><span>上下位置 <output id="productOffsetYValue">0</output></span><input id="productOffsetY" type="range" min="-180" max="160" value="0" step="1" /></label>
@@ -92,7 +98,7 @@
     </section>
 
     <section class="panel preview-panel" aria-label="导出预览">
-      <div class="panel-head"><div><span class="step">06</span><h2>实时预览</h2></div><span class="size-chip" id="sizeChip">800 × 800</span></div>
+      <div class="panel-head"><div><span class="step">07</span><h2>实时预览</h2></div><span class="size-chip" id="sizeChip">800 × 800</span></div>
       <div class="canvas-shell"><canvas id="outputCanvas" width="800" height="800" aria-label="商品营销图预览"></canvas></div>
       <div class="export-row">
         <div><strong id="exportMeta">800×800 · 预计小于400 KB</strong><small id="exportHint">JPG，白色补边，不裁切文字</small></div>
@@ -103,6 +109,6 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js" defer></script>
-  <script src="./app.js?v=43" defer></script>
+  <script src="./app.js?v=44" defer></script>
 </body>
 </html>
