@@ -12,7 +12,7 @@
 </head>
 <body>
   <header class="topbar">
-    <div class="brand"><span class="brand-mark">图</span><div><strong>智能商品图生成器 <em class="version-badge">v3.3.0</em></strong><small>上传豆包成品 · 按尺寸选模板 · 批量导出</small></div></div>
+    <div class="brand"><span class="brand-mark">图</span><div><strong>智能商品图生成器 <em class="version-badge">v3.3.1</em></strong><small>上传豆包成品 · 按尺寸选模板 · 批量导出</small></div></div>
     <div class="status-pill" id="globalStatus"><i></i> 本地处理，不上传原图</div>
   </header>
 
@@ -81,9 +81,10 @@
       </div>
 
       <div class="tune-card background-card">
-        <div class="tune-head"><div><span class="step">05</span><h2>模板底色调色（仅当前模板）</h2></div><button class="text-btn" id="resetTemplateBg" type="button">恢复默认</button></div>
+        <div class="tune-head"><div><span class="step">05</span><h2>模板主题色（仅当前模板）</h2></div><button class="text-btn" id="resetTemplateBg" type="button">恢复默认</button></div>
+        <p class="theme-help">保留模板原有渐变、光影与纹理，只调整具有辨识度的主色系。</p>
         <div class="color-tools"><label class="color-swatch"><span>点击色块自由选色</span><input id="templateBgColor" type="color" value="#ffffff" /></label><label class="hex-field"><span>HEX 色值</span><input id="templateBgHex" value="#FFFFFF" maxlength="7" spellcheck="false" /></label><button class="secondary eyedropper-btn" id="pickScreenColor" type="button">吸管取色</button></div>
-        <div class="layer-switches"><label class="switch-row"><input id="templateBgEnabled" type="checkbox" /><span></span><b>启用自定义底色</b></label><small>状态：<b id="templateBgState">未启用</b> · 颜色会随当前模板单独保存</small></div>
+        <div class="layer-switches"><label class="switch-row"><input id="templateBgEnabled" type="checkbox" /><span></span><b>启用自定义主题色</b></label><small>状态：<b id="templateBgState">未启用</b> · 主题色会随当前模板单独保存</small></div>
       </div>
 
       <div class="tune-card">
@@ -109,6 +110,6 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js" defer></script>
-  <script src="./app.js?v=44" defer></script>
+  <script src="./app.js?v=45" defer></script>
 </body>
 </html>
